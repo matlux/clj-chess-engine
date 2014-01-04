@@ -24,6 +24,49 @@
        (- 8)
        (* 8)))
 
+(defn- file2coord [file]
+  {:post [(and (< % 8) (>= % 0))]}
+  (file-component file))
+
+;(file-coord \a)
+
+(defn- rank2coord [rank]
+  {:post [(and (< % 8) (>= % 0))]}
+  (->> (int *rank-key*)
+       (- (int rank))
+       (- 8)))
+
+;(rank-coord \1)
+
+(defn- coord2file [^long x]
+  {:pre [(and (< x 8) (>= x 0))]}
+  (->> (int *file-key*)
+       (+ x)
+       char))
+
+(defn- coord2rank [^long y]
+  {:pre [(and (< y 8) (>= y 0))]}
+  (->> (- (int *rank-key*) y)
+       (+ 8)
+       char))
+
+;(coord2rank 5)
+
+;(rank-coord \1)
+(defn- pos2coord [^String pos]
+  (let [[file rank] pos
+        x (file2coord file)
+        y (rank2coord rank)]
+    [x y]))
+
+(defn- coord2pos [[x y]]
+  (let [
+        file (coord2file x)
+        rank (coord2rank y)]
+    (str file rank)))
+
+;(coord2pos [4 6])
+
 (defn- index [file rank]
   (+ (file-component file) (rank-component rank)))
 
@@ -35,6 +78,64 @@
 ;;(rank-component \1)
 ;; (lookup (initial-board) "a1")
 ;;=> \R
+
+;; ------------- all possible moves
+
+(defn- is-white? [^Character piece]
+  (Character/isUpperCase piece))
+
+(defprotocol Piece
+  (getMoves [this]))
+
+;;(pos2coord "h3")
+
+(defn- valid-move? [[x y]]
+  (and (< x 8)
+       (>= x 0)
+       (< y 8)
+       (>= x 0)
+       ))
+
+(defn- colid-self? [[x y]] true)
+
+(defn- knight-moves [x y]
+  #{[(+ x 2) (+ y 1)]
+    [(+ x 1) (+ y 2)]
+    [(- x 1) (+ y 2)]
+    [(- x 2) (+ y 1)]
+    [(- x 2) (- y 1)]
+    [(- x 1) (- y 2)]
+    [(+ x 1) (- y 2)]
+    [(+ x 2) (- y 1)]})
+
+(knight-moves 0 0)
+
+(defrecord Knight [^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          kmoves (knight-moves x y)]
+      (map coord2pos (filter valid-move? kmoves)))))
+
+(getMoves (Knight. "g1" true))
+;(pos2coord "g1")
+
+(defn- is-knight? [ piece]
+  (or (= piece \N)
+      (= piece \n)))
+
+(defn convert2obj [ piece]
+  (cond (is-knight? piece) (Knight. "g1" true)))
+
+(defn possible-moves [board pos]
+  (getMoves (convert2obj (lookup board pos))))
+;; => #{"e4" "e3"}
+
+(defn all-possible-moves [board white-turn? castle?]
+  #{["e2" "e4"] ["g1" "f3"]})
+
+;(all-possible-moves nil nil nil)
+
 
 
 ;; -------------- rendering

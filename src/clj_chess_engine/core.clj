@@ -12,14 +12,17 @@
    \P \P \P \P \P \P \P \P
    \R \N \B \Q \K \B \N \R])
 
-(def *file-key* \a)
-(def *rank-key* \0)
+(def ^:dynamic *file-key* \a)
+(def ^:dynamic *rank-key* \0)
 
 (defn- file-component [file]
   (- (int file) (int *file-key*)))
 
 (defn- rank-component [rank]
-  (* 8 (- 8 (- (int rank) (int *rank-key*)))))
+  (->> (int *rank-key*)
+       (- (int rank))
+       (- 8)
+       (* 8)))
 
 (defn- index [file rank]
   (+ (file-component file) (rank-component rank)))
@@ -28,33 +31,13 @@
   (let [[file rank] pos]
     (board (index file rank))))
 
-(defn lookup2 [board pos]
-  (let [[file rank] (map int pos)
-        [fc rc]        (map int [\a \0])
-        f (- file fc)
-        r (* 8 (- 8 (- rank rc)))
-        index (+ f r)]
-    (board index)))
+;; (file-component \a)
+;;(rank-component \1)
+;; (lookup (initial-board) "a1")
+;;=> \R
 
 
-;; fluent move example from section 9.4.2
-
-(defrecord Move [from to castle? promotion]
-  Object
-  (toString [this]
-    (str "Move " (:from this)
-         " to " (:to this)
-         (if (:castle? this) " castle"
-             (if-let [p (:promotion this)]
-               (str " promote to " p)
-               "")))))
-
-(defn build-move [& {:keys [from to castle? promotion]}]
-  {:pre [from to]}
-  (Move. from to castle? promotion))
-
-
-;; --------------
+;; -------------- rendering
 
 (def ^:const board (vec (range 8)))
 

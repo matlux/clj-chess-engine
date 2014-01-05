@@ -164,6 +164,34 @@
 (nothing-between (initial-board) [0 1] [0 6])
 
 
+;;---- Rook
+
+(defn- rook-moves [board x y]
+  (for [a (range -7 8)
+        b (range -7 8)
+        :when (and
+               (or (and (= a 0) (not (= b 0))) (and (= b 0) (not (= b 0))))
+               (valid-move? [(+ a x) (+ b y)])
+               ;(not (collid-self? board true [x y]))
+               (nothing-between board [(+ a x) (+ b y)] [x y])
+               )] [(+ a x) (+ b y)]))
+
+(count (rook-moves (initial-board) 2 2))
+;(nothing-between (initial-board) )
+
+(defrecord Rook [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          moves (rook-moves board x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+
+
+(getMoves (Rook. (initial-board) "a1" false)) ;;bug to solve
+
+
+
 ;;---- bishop
 
 

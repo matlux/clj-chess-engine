@@ -117,17 +117,7 @@
 (defn- is-vertical? [[x1 y1] [x2 y2]]
   (zero? (- x1 x2)))
 
-;;---- bishop
 
-;; (defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
-;;   (for [a (range (inc y1) y2)
-;;         piece (lookup-xy board [x1 a])
-;;         :when (is-piece? piece)] piece))
-
-;; (defn- nothing-between-xy [board [x1 y1] [x2 y2]]
-;;   (let [slop (/ (- y2 y1) (- x2 x1))
-;;         step (if (> (- x2 x1) 0) 1 -1)]
-;;     (map #([(+ x1 1) (+ y1 slop)]) (range 0 8))))
 
 (defn- pos-between-vertical [[x1 y1] [x2 y2]]
   (let [[b1 b2] (if (= (.compareTo y2 y1) 1) [y1 y2] [y2 y1])]
@@ -160,8 +150,6 @@
 (pos-between [7 7] [1 1])
 
 
-;; (defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
-;;   (not-any? is-piece? (for [a (range (inc y1) y2)] (lookup-xy board [x1 a]))))
 
 (defn- nothing-between [board p1 p2]
   (not-any? is-piece? (map #(lookup-xy board %) (pos-between p1 p2))))
@@ -172,34 +160,12 @@
 (nothing-between (initial-board) [0 1] [0 6])
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (initial-board) [0 0] [7 7])
-
-
-;; (defn- nothing-between-xy [board [x1 y1] [x2 y2]]
-;;   {:pre [(let [absslop (math/abs (/ (- y2 y1) (- x2 x1)))]
-;;            (println absslop)
-;;            (or (= absslop 1)
-;;                (= absslop 0)))]}
-;;   (let [slop (/ (- y2 y1) (- x2 x1))
-;;         step (if (> (- x2 x1) 0) 1 -1)
-;;         f (fn [x] [(+ x1 (* step x)) (+ y1 (* slop x))])]
-;;     (map f (range (inc x1) x2))))
-
-
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (initial-board) [0 1] [0 6])
 
-;; (defn- nothing-between [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector c1 ^clojure.lang.PersistentVector c2]
-;;   (cond
-;;    (is-vertical? c1 c2) (nothing-between-vertical board c1 c2)
-;;    :else (nothing-between-xy board c1 c2)))
 
-(defn- bishop-moves1 [board x y]
-  (for [a (range -7 8)
-        b (range -7 8)
-        :when (and
-               (or (= (+ a b) 0) (= (- a b) 0))
-               (not (= a 0))
-               (not (= b 0)))] [a b]))
+;;---- bishop
+
 
 (defn- bishop-moves [board x y]
   (for [a (range -7 8)
@@ -228,6 +194,7 @@
 (getMoves (Bishop. (initial-board) "b6" true))
 
 
+
 ;; ---- knight stuff
 (defn- knight-moves [x y]
   #{[(+ x 2) (+ y 1)]
@@ -252,6 +219,7 @@
       (map coord2pos (filter no-self-collision? (filter valid-move? kmoves))))))
 
 ;;(getMoves (Knight. (initial-board) "g1" true))
+;; f3 g3
 ;;(pos2coord "g1")
 
 ;;(source comp)

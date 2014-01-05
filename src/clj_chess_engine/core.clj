@@ -211,17 +211,22 @@
                (valid-move? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
-               )] (coord2pos [(+ a x) (+ b y)])))
+               )] [(+ a x) (+ b y)]))
 
 (count (bishop-moves (initial-board) 1 2))
-(nothing-between (initial-board) )
+;(nothing-between (initial-board) )
 
 (defrecord Bishop [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
-          moves (bishop-moves x y)]
-      (map coord2pos (filter (partial collid-self? board white?) (filter valid-move? moves))))))
+          moves (bishop-moves board x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+
+
+(getMoves (Bishop. (initial-board) "b6" true))
+
 
 ;; ---- knight stuff
 (defn- knight-moves [x y]

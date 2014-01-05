@@ -130,13 +130,45 @@
 ;;   (let [slop (/ (- y2 y1) (- x2 x1))
 ;;         step (if (> (- x2 x1) 0) 1 -1)]
 ;;     (map #([(+ x1 1) (+ y1 slop)]) (range 0 8))))
+
+(defn- pos-between-vertical [[x1 y1] [x2 y2]]
+  (let [[b1 b2] (if (= (.compareTo y2 y1) 1) [y1 y2] [y2 y1])]
+      (for [a (range (inc b1) b2)] [x1 a])))
+
+(defn- pos-between-xy [[x1 y1] [x2 y2]]
+  (let [forward? (> (- x2 x1) 0)
+          slop (/ (- y2 y1) (- x2 x1))
+          [step a b] (if forward? [1 x1 y1] [-1 x2 y2])
+         f (fn [x] [(+ a (* 1 x)) (+ b (* slop x))])]
+      (map f (range 1 (math/abs(- x2 x1))))))
+
+(defn- pos-between [p1 p2]
+  (if (is-vertical? p1 p2)
+    (pos-between-vertical p1 p2)
+    (pos-between-xy p1 p2)))
+
+
+(pos-between [0 0] [7 7])
+(pos-between [0 0] [0 7])
+(pos-between [2 2] [7 7])
+(pos-between [0 0] [7 0])
+(pos-between [7 7] [0 0])
+(pos-between [0 7] [0 0])
+(pos-between [7 0] [0 0])
+
+
 (defn- nothing-between-xy [board [x1 y1] [x2 y2]]
+  {:pre [(let [absslop (math/abs (/ (- y2 y1) (- x2 x1)))]
+           (println absslop)
+           (or (= absslop 1)
+               (= absslop 0)))]}
   (let [slop (/ (- y2 y1) (- x2 x1))
-        step (if (> (- x2 x1) 0) 1 -1)]
-    (map #([(+ x1 (* step %)) (+ y1 slop)]) (range 0 8))))
+        step (if (> (- x2 x1) 0) 1 -1)
+        f (fn [x] [(+ x1 (* step x)) (+ y1 (* slop x))])]
+    (map f (range (inc x1) x2))))
 
 
-(nothing-between-xy (initial-board) [0 0] [2 2])
+(nothing-between-xy (initial-board) [0 0] [7 7])
 
 (nothing-between-vertical (initial-board) [0 1] [0 6])
 

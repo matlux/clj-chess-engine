@@ -1,4 +1,5 @@
-(ns clj-chess-engine.core)
+(ns clj-chess-engine.core
+  (:require [clojure.math.numeric-tower :as math]))
 
 
 
@@ -70,19 +71,27 @@
 (defn- index [file rank]
   (+ (file-component file) (rank-component rank)))
 
-(defn lookup [board pos]
+(defn lookup [^clojure.lang.PersistentVector board ^String pos]
   (let [[file rank] pos]
     (board (index file rank))))
+(defn lookup-xy [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector pos]
+  (lookup board (coord2pos pos)))
 
 ;; (file-component \a)
 ;;(rank-component \1)
 ;; (lookup (initial-board) "a1")
 ;;=> \R
+;;(lookup-xy (initial-board) [0 7])
 
 ;; ------------- all possible moves
 
 (defn- is-white? [^Character piece]
   (Character/isUpperCase piece))
+(defn- is-black? [^Character piece]
+  (Character/isLowerCase piece))
+(defn- is-piece? [^Character piece]
+  (Character/isLetter piece))
+
 
 (defprotocol Piece
   (getMoves [this]))
@@ -96,8 +105,73 @@
        (>= x 0)
        ))
 
-(defn- colid-self? [[x y]] true)
+(defn collid-self? [board white-turn? coord]
+  (if white-turn?
+    (is-white? (lookup board (coord2pos coord)))
+    (is-black? (lookup board (coord2pos coord)))))
 
+
+;(collid-self? (initial-board) false [0 7])
+;(Character/isLowerCase \-)
+
+(defn- is-vertical? [[x1 y1] [x2 y2]]
+  (zero? (- x1 x2)))
+
+;;---- bishop
+
+(defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
+  (not-any? is-piece? (for [a (range (inc y1) y2)] (lookup-xy board [x1 a]))))
+;; (defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
+;;   (for [a (range (inc y1) y2)
+;;         piece (lookup-xy board [x1 a])
+;;         :when (is-piece? piece)] piece))
+
+;; (defn- nothing-between-xy [board [x1 y1] [x2 y2]]
+;;   (let [slop (/ (- y2 y1) (- x2 x1))
+;;         step (if (> (- x2 x1) 0) 1 -1)]
+;;     (map #([(+ x1 1) (+ y1 slop)]) (range 0 8))))
+(defn- nothing-between-xy [board [x1 y1] [x2 y2]]
+  (let [slop (/ (- y2 y1) (- x2 x1))
+        step (if (> (- x2 x1) 0) 1 -1)]
+    (map #([(+ x1 (* step %)) (+ y1 slop)]) (range 0 8))))
+
+
+(nothing-between-xy (initial-board) [0 0] [2 2])
+
+(nothing-between-vertical (initial-board) [0 1] [0 6])
+
+(defn- nothing-between [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector c1 ^clojure.lang.PersistentVector c2]
+  (cond
+   (is-vertical? c1 c2) (nothing-between-vertical board c1 c2)
+   :else (nothing-between-xy board c1 c2)))
+
+(defn- bishop-moves1 [board x y]
+  (for [a (range -7 8)
+        b (range -7 8)
+        :when (and
+               (or (= (+ a b) 0) (= (- a b) 0))
+               (not (= a 0))
+               (not (= b 0)))] [a b]))
+
+(defn- bishop-moves [board x y]
+  (for [a (range -7 8)
+        b (range -7 8)
+        :when (and
+               (or (= (+ a b) 0) (= (- a b) 0))
+               (not (= a 0))
+               (not (= b 0))
+               (nothing-between board [a b] [x y]))] [a b]))
+
+(count (bishop-moves (initial-board) 1 2))
+
+(defrecord Bishop [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          moves (bishop-moves x y)]
+      (map coord2pos (filter (partial collid-self? board white?) (filter valid-move? moves))))))
+
+;; ---- knight stuff
 (defn- knight-moves [x y]
   #{[(+ x 2) (+ y 1)]
     [(+ x 1) (+ y 2)]
@@ -108,27 +182,33 @@
     [(+ x 1) (- y 2)]
     [(+ x 2) (- y 1)]})
 
-(knight-moves 0 0)
+;;(knight-moves 0 0)
 
-(defrecord Knight [^String pos ^boolean white?]
+
+
+(defrecord Knight [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
-          kmoves (knight-moves x y)]
-      (map coord2pos (filter valid-move? kmoves)))))
+          kmoves (knight-moves x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? kmoves))))))
 
-(getMoves (Knight. "g1" true))
-;(pos2coord "g1")
+;;(getMoves (Knight. (initial-board) "g1" true))
+;;(pos2coord "g1")
+
+;;(source comp)
 
 (defn- is-knight? [ piece]
   (or (= piece \N)
       (= piece \n)))
 
-(defn convert2obj [ piece]
-  (cond (is-knight? piece) (Knight. "g1" true)))
+(defn convert2obj [board pos piece]
+  (cond (is-knight? piece) (Knight. board "g1" true)))
+
 
 (defn possible-moves [board pos]
-  (getMoves (convert2obj (lookup board pos))))
+  (getMoves (convert2obj board pos (lookup board pos))))
 ;; => #{"e4" "e3"}
 
 (defn all-possible-moves [board white-turn? castle?]

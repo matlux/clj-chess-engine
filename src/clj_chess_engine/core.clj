@@ -102,7 +102,7 @@
   (and (< x 8)
        (>= x 0)
        (< y 8)
-       (>= x 0)
+       (>= y 0)
        ))
 
 (defn collid-self? [board white-turn? coord]
@@ -119,8 +119,6 @@
 
 ;;---- bishop
 
-(defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
-  (not-any? is-piece? (for [a (range (inc y1) y2)] (lookup-xy board [x1 a]))))
 ;; (defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
 ;;   (for [a (range (inc y1) y2)
 ;;         piece (lookup-xy board [x1 a])
@@ -136,6 +134,10 @@
       (for [a (range (inc b1) b2)] [x1 a])))
 
 (defn- pos-between-xy [[x1 y1] [x2 y2]]
+  {:pre [(let [absslop (math/abs (/ (- y2 y1) (- x2 x1)))]
+           ;(println absslop)
+           (or (= absslop 1)
+               (= absslop 0)))]}
   (let [forward? (> (- x2 x1) 0)
           slop (/ (- y2 y1) (- x2 x1))
           [step a b] (if forward? [1 x1 y1] [-1 x2 y2])
@@ -155,27 +157,41 @@
 (pos-between [7 7] [0 0])
 (pos-between [0 7] [0 0])
 (pos-between [7 0] [0 0])
+(pos-between [7 7] [1 1])
 
 
-(defn- nothing-between-xy [board [x1 y1] [x2 y2]]
-  {:pre [(let [absslop (math/abs (/ (- y2 y1) (- x2 x1)))]
-           (println absslop)
-           (or (= absslop 1)
-               (= absslop 0)))]}
-  (let [slop (/ (- y2 y1) (- x2 x1))
-        step (if (> (- x2 x1) 0) 1 -1)
-        f (fn [x] [(+ x1 (* step x)) (+ y1 (* slop x))])]
-    (map f (range (inc x1) x2))))
+;; (defn- nothing-between-vertical [board [x1 y1] [x2 y2]]
+;;   (not-any? is-piece? (for [a (range (inc y1) y2)] (lookup-xy board [x1 a]))))
+
+(defn- nothing-between [board p1 p2]
+  (not-any? is-piece? (map #(lookup-xy board %) (pos-between p1 p2))))
+
+(nothing-between (initial-board) [0 0] [7 7])
+(nothing-between (initial-board) [1 1] [6 6])
+(nothing-between (initial-board) [2 0] [6 0])
+(nothing-between (initial-board) [0 1] [0 6])
+(nothing-between (initial-board) [0 0] [7 7])
+(nothing-between (initial-board) [0 0] [7 7])
 
 
-(nothing-between-xy (initial-board) [0 0] [7 7])
+;; (defn- nothing-between-xy [board [x1 y1] [x2 y2]]
+;;   {:pre [(let [absslop (math/abs (/ (- y2 y1) (- x2 x1)))]
+;;            (println absslop)
+;;            (or (= absslop 1)
+;;                (= absslop 0)))]}
+;;   (let [slop (/ (- y2 y1) (- x2 x1))
+;;         step (if (> (- x2 x1) 0) 1 -1)
+;;         f (fn [x] [(+ x1 (* step x)) (+ y1 (* slop x))])]
+;;     (map f (range (inc x1) x2))))
 
-(nothing-between-vertical (initial-board) [0 1] [0 6])
 
-(defn- nothing-between [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector c1 ^clojure.lang.PersistentVector c2]
-  (cond
-   (is-vertical? c1 c2) (nothing-between-vertical board c1 c2)
-   :else (nothing-between-xy board c1 c2)))
+(nothing-between (initial-board) [0 0] [7 7])
+(nothing-between (initial-board) [0 1] [0 6])
+
+;; (defn- nothing-between [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector c1 ^clojure.lang.PersistentVector c2]
+;;   (cond
+;;    (is-vertical? c1 c2) (nothing-between-vertical board c1 c2)
+;;    :else (nothing-between-xy board c1 c2)))
 
 (defn- bishop-moves1 [board x y]
   (for [a (range -7 8)
@@ -192,9 +208,13 @@
                (or (= (+ a b) 0) (= (- a b) 0))
                (not (= a 0))
                (not (= b 0))
-               (nothing-between board [a b] [x y]))] [a b]))
+               (valid-move? [(+ a x) (+ b y)])
+               ;(not (collid-self? board true [x y]))
+               (nothing-between board [(+ a x) (+ b y)] [x y])
+               )] (coord2pos [(+ a x) (+ b y)])))
 
 (count (bishop-moves (initial-board) 1 2))
+(nothing-between (initial-board) )
 
 (defrecord Bishop [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
   Piece

@@ -13,6 +13,27 @@
    \P \P \P \P \P \P \P \P
    \R \N \B \Q \K \B \N \R])
 
+(defn test-board1 []
+  [\r \n \b \q \k \b \n \r
+   \p \p \p \p \p \p \p \p
+   \- \- \- \- \- \- \- \-
+   \- \- \- \- \- \- \- \-
+   \- \- \- \- \- \- \- \-
+   \- \- \N \- \- \- \- \-
+   \P \P \P \P \P \P \P \P
+   \R \- \B \Q \K \B \N \R])
+
+(defn test-board2 []
+  [\r \n \- \q \k \b \n \r
+   \p \- \p \p \p \p \p \p
+   \- \- \- \- \- \- \- \-
+   \- \K \- \- \- \- \- \-
+   \- \p \- \- \- \- \- \-
+   \- \- \- \b \- \- \- \-
+   \P \- \P \- \- \P \P \P
+   \R \- \B \Q \K \B \N \R])
+
+
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
 
@@ -161,7 +182,7 @@
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (initial-board) [0 0] [7 7])
-(nothing-between (initial-board) [0 1] [0 6])
+(nothing-between (test-board2) [0 7] [1 7])
 
 
 ;;---- Rook
@@ -170,7 +191,7 @@
   (for [a (range -7 8)
         b (range -7 8)
         :when (and
-               (or (and (= a 0) (not (= b 0))) (and (= b 0) (not (= b 0))))
+               (or (and (= a 0) (not (= b 0))) (and (= b 0) (not (= a 0))))
                (valid-move? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
@@ -188,9 +209,11 @@
       (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
 
 
-(getMoves (Rook. (initial-board) "a1" false)) ;;bug to solve
-
-
+(getMoves (Rook. (test-board2) "c2" true))
+(pos2coord "a1")
+(rook-moves (test-board2) 0 7)
+(nothing-between (test-board2) [1 7] [0 7])
+(valid-move? [1 7])
 
 ;;---- bishop
 

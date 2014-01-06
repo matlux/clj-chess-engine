@@ -184,6 +184,40 @@
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (test-board2) [0 7] [1 7])
 
+;; --------- queen moves
+
+(defn- queen-moves [board x y]
+  (for [a (range -7 8)
+        b (range -7 8)
+        :when (and
+               (or (and (= (+ a b) 0)
+                        (not (= a 0))
+                        (not (= b 0))
+                        )
+                   (and (= (- a b) 0)
+                        (not (= a 0))
+                        (not (= b 0))
+                        )
+                   (and (= a 0) (not (= b 0)))
+                   (and (= b 0) (not (= a 0))))
+               (valid-move? [(+ a x) (+ b y)])
+               ;(not (collid-self? board true [x y]))
+               (nothing-between board [(+ a x) (+ b y)] [x y])
+               )] [(+ a x) (+ b y)]))
+
+(count (queen-moves (initial-board) 2 2))
+;(nothing-between (initial-board) )
+
+(defrecord Queen [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          moves (queen-moves board x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+
+(getMoves (Queen. (test-board2) "d3" true))
+;;=> ("a3" "b3" "c4" "c3" "d7" "d6" "d5" "d4" "d2" "e4" "e3" "e2" "f5" "f3" "g6" "g3" "h7" "h3")
 
 ;;---- Rook
 
@@ -242,7 +276,15 @@
       (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
 
 
-(getMoves (Bishop. (initial-board) "b6" true))
+(getMoves (Bishop. (initial-board) "a3" true))
+;;("b4" "c5" "d6" "e7")
+(getMoves (Bishop. (test-board2) "c1" true))
+;;=> ("a3" "b2" "d2" "e3" "f4" "g5" "h6")
+(getMoves (Bishop. (test-board2) "a5" true))
+;;=> ("b6" "b4" "c7")
+(getMoves (Bishop. (test-board2) "e2" true))
+;;("d3" "f3" "g4" "h5")
+
 
 
 

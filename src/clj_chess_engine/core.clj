@@ -130,6 +130,13 @@
   (if white-turn?
     (is-white? (lookup board (coord2pos coord)))
     (is-black? (lookup board (coord2pos coord)))))
+(defn collid-oposite? [board white-turn? coord]
+  (if white-turn?
+    (is-black? (lookup board (coord2pos coord)))
+    (is-white? (lookup board (coord2pos coord)))
+    ))
+
+(collid-oposite? (initial-board) true [2 7])
 
 
 ;(collid-self? (initial-board) false [0 7])
@@ -184,6 +191,48 @@
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (test-board2) [0 7] [1 7])
 
+
+(defn collid? [board pos] (not (= (lookup-xy board pos) \-)))
+
+;;(collid? (initial-board) [1 6])
+
+(defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
+
+;;---- pawn moves
+(defn- pawn-moves [board white? x y]
+  (let [[op start-rank] (if white? [- 6] [+ 1])
+        moves [
+               (when (collid-oposite? board white? [(+ x 1) (op y 1)]) [(+ x 1) (op y 1)])
+               (when (collid-oposite? board white? [(- x 1) (op y 1)]) [(- x 1) (op y 1)])
+               (when (not (collid? board [x (op y 1)])) [x (op y 1)])
+               (when (and
+                      (not (collid? board [x (op y 1)]))
+                      (not (collid? board [x (op y 2)]))
+                      (= y start-rank)) [x (op y 2)])
+               ]]
+    (filter (comp not nil?) moves)))
+
+;;(not (= (lookup-xy (initial-board) [2 1]) \-))
+(pawn-moves (initial-board) false 1 1)
+
+
+
+
+(count (pawn-moves (initial-board) true 2 2))
+;(nothing-between (initial-board) )
+
+(defrecord Pawn [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          moves (pawn-moves board white? x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+
+
+;;(getMoves (Pawn. (test-board2) "b3" false))
+;; => ("c2" "a2" "b2")
+
 ;;---- King moves
 
 (defn- king-moves [board x y]
@@ -217,7 +266,7 @@
       (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
 
 
-(getMoves (Rook. (test-board2) "d3" true))
+(getMoves (King. (test-board2) "d3" true))
 
 
 ;; --------- queen moves

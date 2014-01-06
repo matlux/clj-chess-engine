@@ -184,6 +184,42 @@
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (test-board2) [0 7] [1 7])
 
+;;---- King moves
+
+(defn- king-moves [board x y]
+  (for [a (range -1 2)
+        b (range -1 2)
+        :when (and
+               (or (and (= (+ a b) 0)
+                        (not (= a 0))
+                        (not (= b 0))
+                        )
+                   (and (= (- a b) 0)
+                        (not (= a 0))
+                        (not (= b 0))
+                        )
+                   (and (= a 0) (not (= b 0)))
+                   (and (= b 0) (not (= a 0))))
+               (valid-move? [(+ a x) (+ b y)])
+               ;(not (collid-self? board true [x y]))
+               (nothing-between board [(+ a x) (+ b y)] [x y])
+               )] [(+ a x) (+ b y)]))
+
+(count (king-moves (initial-board) 2 2))
+;(nothing-between (initial-board) )
+
+(defrecord King [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+  Piece
+  (getMoves [this]
+    (let [[x y] (pos2coord pos)
+          moves (king-moves board x y)
+          no-self-collision? (comp not (partial collid-self? board white?))]
+      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+
+
+(getMoves (Rook. (test-board2) "d3" true))
+
+
 ;; --------- queen moves
 
 (defn- queen-moves [board x y]

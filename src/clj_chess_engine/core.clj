@@ -216,14 +216,20 @@
 ;;---- pawn moves
 (defn- pawn-moves [board white? x y]
   (let [[op start-rank] (if white? [- 6] [+ 1])
+        right-diag [(+ x 1) (op y 1)]
+        left-diag [(- x 1) (op y 1)]
+        front [x (op y 1)]
+        front2 [x (op y 2)]
         moves [
-               (when (collid-oposite? board white? [(+ x 1) (op y 1)]) [(+ x 1) (op y 1)])
-               (when (collid-oposite? board white? [(- x 1) (op y 1)]) [(- x 1) (op y 1)])
-               (when (not (collid? board [x (op y 1)])) [x (op y 1)])
+               (when (and (valid-move? right-diag)
+                          (collid-oposite? board white? right-diag)) right-diag)
+               (when (and (valid-move? left-diag)
+                          (collid-oposite? board white? left-diag)) left-diag)
+               (when (not (collid? board front)) front)
                (when (and
-                      (not (collid? board [x (op y 1)]))
-                      (not (collid? board [x (op y 2)]))
-                      (= y start-rank)) [x (op y 2)])
+                      (not (collid? board front))
+                      (not (collid? board front2))
+                      (= y start-rank)) front2)
                ]]
     (filter (comp not nil?) moves)))
 
@@ -247,6 +253,10 @@
 
 ;;(getMoves (Pawn. (test-board2) "b3" false))
 ;; => ("c2" "a2" "b2")
+;;(getMoves (Pawn. (test-board2) "a7" false))
+;; =>("a6" "a5")
+;;(getMoves (Pawn. (test-board2) "a6" false))
+;; =>("b5" "a5")
 
 ;;---- King moves
 
@@ -420,6 +430,21 @@
 (defn- is-knight? [ piece]
   (or (= piece \N)
       (= piece \n)))
+(defn- is-bishop? [ piece]
+  (or (= piece \B)
+      (= piece \b)))
+(defn- is-queen? [ piece]
+  (or (= piece \Q)
+      (= piece \q)))
+(defn- is-king? [ piece]
+  (or (= piece \K)
+      (= piece \k)))
+(defn- is-rook? [ piece]
+  (or (= piece \R)
+      (= piece \r)))
+(defn- is-pawn? [ piece]
+  (or (= piece \P)
+      (= piece \p)))
 
 (defn- one-color [board white?]
   (let [color? (if white? is-white? is-black?)]
@@ -427,13 +452,24 @@
 
 (one-color (initial-board) false)
 
-(defn convert2obj [board pos piece]
-  (cond (is-knight? piece) (Knight. board "g1" true)))
+(defn convert2obj [board pos]
+  (let [piece (lookup board pos)
+        color (is-white? piece)]
+    (cond
+     (is-knight? piece) (Knight. board pos color)
+     (is-bishop? piece) (Bishop. board pos color)
+     (is-queen? piece) (Queen. board pos color)
+     (is-king? piece) (King. board pos color)
+     (is-rook? piece) (Rook. board pos color)
+     (is-pawn? piece) (Pawn. board pos color))))
+
+(convert2obj (initial-board) "h1")
 
 
 (defn possible-moves [board pos]
-  (getMoves (convert2obj board pos (lookup board pos))))
+  (getMoves (convert2obj board pos)))
 ;; => #{"e4" "e3"}
+(possible-moves (initial-board) "h2")
 
 (defn all-possible-moves [board white-turn? castle?]
  (->> (one-color board white-turn?) char2state (map (fn [[pos c]] (possible-moves board white-turn? pos)))))

@@ -1,5 +1,6 @@
 (ns clj-chess-engine.core
-  (:require [clojure.math.numeric-tower :as math]))
+  (:require [clojure.math.numeric-tower :as math])
+  (:import clojure.lang.PersistentVector))
 
 
 
@@ -92,10 +93,10 @@
 (defn- index [file rank]
   (+ (file-component file) (rank-component rank)))
 
-(defn lookup [^clojure.lang.PersistentVector board ^String pos]
+(defn lookup [^PersistentVector board ^String pos]
   (let [[file rank] pos]
     (board (index file rank))))
-(defn lookup-xy [^clojure.lang.PersistentVector board ^clojure.lang.PersistentVector pos]
+(defn lookup-xy [^PersistentVector board ^PersistentVector pos]
   (lookup board (coord2pos pos)))
 
 ;; (file-component \a)
@@ -289,7 +290,7 @@
 (count (king-moves (initial-board) 2 2))
 ;(nothing-between (initial-board) )
 
-(defrecord King [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord King [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
@@ -325,7 +326,7 @@
 (count (queen-moves (initial-board) 2 2))
 ;(nothing-between (initial-board) )
 
-(defrecord Queen [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord Queen [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
@@ -351,7 +352,7 @@
 (count (rook-moves (initial-board) 2 2))
 ;(nothing-between (initial-board) )
 
-(defrecord Rook [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord Rook [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
@@ -384,7 +385,7 @@
 (count (bishop-moves (initial-board) 1 2))
 ;(nothing-between (initial-board) )
 
-(defrecord Bishop [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord Bishop [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
@@ -420,7 +421,7 @@
 
 
 
-(defrecord Knight [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord Knight [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
@@ -453,13 +454,13 @@
   (or (= piece \P)
       (= piece \p)))
 
-(defn- one-color [board white?]
+(defn- one-color [^PersistentVector board ^Boolean white?]
   (let [color? (if white? is-white? is-black?)]
     (map #(if (color? %) % \- ) board)))
 
 (one-color (initial-board) false)
 
-(defn convert2obj [board pos]
+(defn convert2obj [^PersistentVector board ^String pos]
   (let [piece (lookup board pos)
         color (is-white? piece)]
     (cond
@@ -472,8 +473,9 @@
 
 (convert2obj (initial-board) "h1")
 
+;;---- move validation
 
-(defn possible-moves [board pos]
+(defn possible-moves [^PersistentVector board ^String pos]
   (getMoves (convert2obj board pos)))
 ;; => #{"e4" "e3"}
 (possible-moves (initial-board) "a2")
@@ -481,7 +483,7 @@
 ;; (defn all-possible-moves [board white-turn? castle?]
 ;;   (->> (one-color board white-turn?) board2xy-map-piece (map (fn [[pos-xy c]] (coord2pos pos-xy)))))
 
-(defn all-possible-moves [board white-turn? castle?]
+(defn all-possible-moves [^PersistentVector board ^Boolean white-turn? ^Boolean castle?]
   (->> (one-color board white-turn?)
        board2xy-map-piece
        (mapcat
@@ -496,6 +498,18 @@
 ;(all-possible-moves (initial-board) true false)
 ;(count (all-possible-moves (initial-board) true false))
 
+
+;;----- change state of board (make moves)
+
+;;todo: convert map back to vector of char or manipulate board directly
+(defn apply-move [^PersistentVector board ^PersistentVector [from to]]
+  (let [piece (lookup board from)
+        boardmap (board2xy-map-piece board)
+        from-xy (pos2coord from)
+        to-xy (pos2coord to)]
+    (-> (dissoc boardmap from-xy) (assoc to-xy piece))))
+
+(apply-move (initial-board) ["a2" "a3"])
 
 
 ;; -------------- rendering

@@ -200,11 +200,18 @@
 (defn c1dto2d [i]
   (vector (int (/ i 8)) (mod i 8)))
 
+(defn c1dto2d-xy [i]
+  (vector (mod i 8) (int (/ i 8))))
+
 (defn char2state [pieces-list]
   (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list))))
 
- ((fn [pieces-list]
-    (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list)))) (initial-board))
+(defn board2xy-map-piece [pieces-list]
+  (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d-xy %1) %2 ) (range 64) pieces-list))))
+
+
+;; ((fn [pieces-list]
+;;    (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list)))) (initial-board))
 
 
 
@@ -469,11 +476,19 @@
 (defn possible-moves [board pos]
   (getMoves (convert2obj board pos)))
 ;; => #{"e4" "e3"}
-(possible-moves (initial-board) "h2")
+(possible-moves (initial-board) "a2")
+
+;; (defn all-possible-moves [board white-turn? castle?]
+;;   (->> (one-color board white-turn?) board2xy-map-piece (map (fn [[pos-xy c]] (coord2pos pos-xy)))))
 
 (defn all-possible-moves [board white-turn? castle?]
- (->> (one-color board white-turn?) char2state (map (fn [[pos c]] (possible-moves board white-turn? pos)))))
+  (->> (one-color board white-turn?)
+       board2xy-map-piece
+       (map (fn [[pos-xy c]] (possible-moves board (coord2pos pos-xy))))
+       (filter #(not (= % '())))))
 
+;;(filter #(is-piece? %))
+;;(map (fn [[pos c]] (possible-moves board pos)))
 ;(all-possible-moves (initial-board) true false)
 
 

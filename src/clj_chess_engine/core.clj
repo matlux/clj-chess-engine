@@ -484,12 +484,17 @@
 (defn all-possible-moves [board white-turn? castle?]
   (->> (one-color board white-turn?)
        board2xy-map-piece
-       (map (fn [[pos-xy c]] (possible-moves board (coord2pos pos-xy))))
-       (filter #(not (= % '())))))
+       (mapcat
+        (fn [[pos-xy c]]
+          (let [pos (coord2pos pos-xy)]
+            (map
+             (fn [move] [pos move])
+             (possible-moves board pos)))))))
 
 ;;(filter #(is-piece? %))
 ;;(map (fn [[pos c]] (possible-moves board pos)))
 ;(all-possible-moves (initial-board) true false)
+;(count (all-possible-moves (initial-board) true false))
 
 
 

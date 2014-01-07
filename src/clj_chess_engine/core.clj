@@ -191,8 +191,23 @@
 (nothing-between (initial-board) [0 0] [7 7])
 (nothing-between (test-board2) [0 7] [1 7])
 
-
 (defn collid? [board pos] (not (= (lookup-xy board pos) \-)))
+
+(defn c2dto1d [v]
+  (let [[x y] v]
+    (clojure.core/+ x (clojure.core/* 8 y))))
+
+(defn c1dto2d [i]
+  (vector (int (/ i 8)) (mod i 8)))
+
+(defn char2state [pieces-list]
+  (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list))))
+
+ ((fn [pieces-list]
+    (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list)))) (initial-board))
+
+
+
 
 ;;(collid? (initial-board) [1 6])
 
@@ -406,6 +421,12 @@
   (or (= piece \N)
       (= piece \n)))
 
+(defn- one-color [board white?]
+  (let [color? (if white? is-white? is-black?)]
+    (map #(if (color? %) % \- ) board)))
+
+(one-color (initial-board) false)
+
 (defn convert2obj [board pos piece]
   (cond (is-knight? piece) (Knight. board "g1" true)))
 
@@ -415,9 +436,9 @@
 ;; => #{"e4" "e3"}
 
 (defn all-possible-moves [board white-turn? castle?]
-  #{["e2" "e4"] ["g1" "f3"]})
+ (->> (one-color board white-turn?) char2state (map (fn [[pos c]] (possible-moves board white-turn? pos)))))
 
-;(all-possible-moves nil nil nil)
+;(all-possible-moves (initial-board) true false)
 
 
 
@@ -425,12 +446,6 @@
 
 (def ^:const board (vec (range 8)))
 
-(defn c2dto1d [v]
-  (let [[x y] v]
-    (clojure.core/+ x (clojure.core/* 8 y))))
-
-(defn c1dto2d [i]
-  (vector (int (/ i 8)) (mod i 8)))
 
 ;;(c2dto1d [1 1])
 ;;(c1dto2d 63)
@@ -449,11 +464,6 @@
 (defn display-board [board-state]
   (print (render-board board-state)))
 
-(defn char2state [pieces-list]
-  (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list))))
-
- ((fn [pieces-list]
-    (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list)))) (initial-board))
 
 
 

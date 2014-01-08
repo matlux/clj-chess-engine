@@ -515,6 +515,70 @@
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 
+;; todo: catch any exception
+;; todo: check that any none valid input returns nil
+(defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
+  (let [moves (all-possible-moves board white-turn? castle?)]
+    (some #(= move %) moves)))
+
+;;(is-move-valid? (initial-board) true false ["b2" "b3"])
+;; => true
+;;(is-move-valid? (initial-board) true false nil)
+;; => false
+
+;; (defmacro --> [m firstkey & keys]
+;;   (let [a (map #(list 'get %) keys)]
+;;     `(-> (~m ~firstkey) ~@a)))
+
+;; test expansion
+;;(macroexpand-1 '(--> mymap "key1" "key2" "key3"))
+
+(defn apply-move-safe  [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
+  (if (is-move-valid? board white-turn? castle? move) (apply-move (initial-board) move)))
+
+(defn check? [board white-turn?]
+  false)
+
+(defn forfeit [white-turn?]
+  (if white-turn? [0 1] [1 0]))
+
+;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
+(defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
+  (let [in-check (check? board white-turn?)
+        [[move new-state] castled?] (if white-turn?
+               [(f1 board white-turn? white-castled? (first move-history) state-f1) white-castled?]
+               [(f2 board white-turn? black-castled? (first move-history) state-f2) black-castled?])
+        valid? (is-move-valid? board white-turn? false move)
+        new-history (conj move-history move)]
+    (if (not valid?)
+      [(forfeit white-turn?) new-history board true]
+      (if white-turn?
+        (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
+        (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
+      )))
+
+(defn play-game [board f1 f2]
+  (play-game-rec board f1 f2 true false false [] nil nil)
+  )
+;; => [score move-history last-board invalid-move?]
+;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]
+
+(defn f1 [board am-i-white? have-i-castled? last-move option-state]
+  (let [move-seq (if (nil? option-state)
+           (list ["e2" "e4"] ["g1" "f3"])
+           option-state)]
+    [(first move-seq) (next move-seq)]))
+
+(defn f2 [board am-i-white? have-i-castled? last-move option-state]
+  (let [move-seq (if (nil? option-state)
+           (list ["e7" "e5"] ["f7" "f6"])
+           option-state)]
+    [(first move-seq) (next move-seq)]))
+
+(let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
+  (display-board last-board))
+;; => [move option-state]
+
 ;; -------------- rendering
 
 (def ^:const board (vec (range 8)))

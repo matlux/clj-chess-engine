@@ -511,6 +511,8 @@
 ;;(apply index "b2")
 
 (display-board (apply-move (initial-board) ["b2" "b3"]))
+(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
+;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 
 ;; -------------- rendering
@@ -532,16 +534,18 @@
                            (format "| %s |\n%s\n" c line)
                            (format "| %s " c))) (range 1 65)))))
 
-(defn display-board [board-state]
-  (print (render-board board-state)))
-
-
-
-
-
-
 
 (def init-board-state (char2state (initial-board)))
+
+
+(defn display-board [board]
+  (print (render-board (char2state board))))
+
+
+
+
+
+
 
 
 ;(display-board init-board-state)

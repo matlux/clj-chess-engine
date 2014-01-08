@@ -503,13 +503,14 @@
 
 ;;todo: convert map back to vector of char or manipulate board directly
 (defn apply-move [^PersistentVector board ^PersistentVector [from to]]
-  (let [piece (lookup board from)
-        boardmap (board2xy-map-piece board)
-        from-xy (pos2coord from)
-        to-xy (pos2coord to)]
-    (-> (dissoc boardmap from-xy) (assoc to-xy piece))))
+  (let [piece (lookup board from)]
+    (-> (assoc board (apply index from) \-)
+        (assoc (apply index to) piece)
+        )))
 
-(apply-move (initial-board) ["a2" "a3"])
+;;(apply index "b2")
+
+(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 
 ;; -------------- rendering

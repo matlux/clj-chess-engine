@@ -54,6 +54,17 @@
    \P \P \P \P \- \P \P \P
    \R \N \B \- \K \- \N \R])
 
+(defn could-become-in-check-test []  ;; it's blacks turn, king is in check. no move will save him => check mate
+  [\r \- \b \q \k \b \n \r
+   \p \p \p \p \- \p \p \p
+   \- \- \n \- \- \- \- \-
+   \- \- \- \- \p \- \- \Q
+   \- \- \B \- \P \- \- \-
+   \- \- \- \- \- \- \- \-
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \N \R])
+
+
 
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)

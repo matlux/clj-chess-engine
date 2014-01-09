@@ -34,6 +34,16 @@
    \P \- \P \- \- \P \P \P
    \R \- \B \Q \K \B \N \R])
 
+(defn check-mate-test []  ;; it's blacks turn, king is in check. no move will save him => check mate
+  [\r \- \b \q \k \b \n \r
+   \p \p \p \p \- \Q \p \p
+   \- \- \n \- \- \p \- \-
+   \- \- \- \- \p \- \- \-
+   \- \- \B \- \P \- \- \-
+   \- \- \- \- \- \- \- \-
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \N \R])
+
 
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
@@ -435,6 +445,9 @@
 
 ;;(source comp)
 
+
+
+
 (defn- is-knight? [ piece]
   (or (= piece \N)
       (= piece \n)))
@@ -565,13 +578,13 @@
 
 (defn f1 [board am-i-white? have-i-castled? last-move option-state]
   (let [move-seq (if (nil? option-state)
-           (list ["e2" "e4"] ["g1" "f3"])
+           (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 
 (defn f2 [board am-i-white? have-i-castled? last-move option-state]
   (let [move-seq (if (nil? option-state)
-           (list ["e7" "e5"] ["f7" "f6"])
+           (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 
@@ -581,7 +594,7 @@
 
 ;; -------------- rendering
 
-(def ^:const board (vec (range 8)))
+;;(def ^:const board (vec (range 8)))
 
 
 ;;(c2dto1d [1 1])

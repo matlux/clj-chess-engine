@@ -552,21 +552,22 @@
 (king-pos (check-mate-test) false)
 
 (defn check? [board white-king? castled?]
-  (let [opposite-moves (all-possible-moves board white-king? castled?)
+  (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
         opposite-king (king-pos board white-king?)]
     (some #(= % opposite-king) (map #(second %) opposite-moves))))
 
-(check? (check-mate-test) false false)
+;;(check? (check-mate-test) false false)
+(check? (initial-board) false false)
 
 (defn forfeit [white-turn?]
   (if white-turn? [0 1] [1 0]))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
-  (let [in-check (check? board white-turn? false)
+  (let [in-check? (check? board (not white-turn?) false)
         [[move new-state] castled?] (if white-turn?
-               [(f1 board white-turn? white-castled? (first move-history) state-f1) white-castled?]
-               [(f2 board white-turn? black-castled? (first move-history) state-f2) black-castled?])
+               [(f1 board white-turn? white-castled? in-check? (first move-history) state-f1) white-castled?]
+               [(f2 board white-turn? black-castled? in-check? (first move-history) state-f2) black-castled?])
         valid? (is-move-valid? board white-turn? false move)
         new-history (conj move-history move)]
     (if (not valid?)
@@ -582,15 +583,15 @@
 ;; => [score move-history last-board invalid-move?]
 ;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]
 
-(defn f1 [board am-i-white? have-i-castled? last-move option-state]
+(defn f1 [board am-i-white? have-i-castled? in-check? last-move option-state]
   (let [move-seq (if (nil? option-state)
            (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 
-(defn f2 [board am-i-white? have-i-castled? last-move option-state]
+(defn f2 [board am-i-white? have-i-castled? in-check? last-move option-state]
   (let [move-seq (if (nil? option-state)
-           (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"])
+           (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"] ["e8" "e7"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 

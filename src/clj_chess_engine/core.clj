@@ -538,26 +538,32 @@
 ;; => true
 ;;(is-move-valid? (initial-board) true false nil)
 ;; => false
-
 ;; (defmacro --> [m firstkey & keys]
 ;;   (let [a (map #(list 'get %) keys)]
 ;;     `(-> (~m ~firstkey) ~@a)))
 
-;; test expansion
-;;(macroexpand-1 '(--> mymap "key1" "key2" "key3"))
-
 (defn apply-move-safe  [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
   (if (is-move-valid? board white-turn? castle? move) (apply-move (initial-board) move)))
 
-(defn check? [board white-turn?]
-  false)
+(defn king-pos [board king-white?]
+  (let [king (if king-white? \K \k)]
+    (->> ((->>  (group-by #(second %) (board2xy-map-piece board)) (into {})) king) ffirst coord2pos)))
+
+(king-pos (check-mate-test) false)
+
+(defn check? [board white-king? castled?]
+  (let [opposite-moves (all-possible-moves board white-king? castled?)
+        opposite-king (king-pos board white-king?)]
+    (some #(= % opposite-king) (map #(second %) opposite-moves))))
+
+(check? (check-mate-test) false false)
 
 (defn forfeit [white-turn?]
   (if white-turn? [0 1] [1 0]))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
-  (let [in-check (check? board white-turn?)
+  (let [in-check (check? board white-turn? false)
         [[move new-state] castled?] (if white-turn?
                [(f1 board white-turn? white-castled? (first move-history) state-f1) white-castled?]
                [(f2 board white-turn? black-castled? (first move-history) state-f2) black-castled?])

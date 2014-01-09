@@ -523,8 +523,9 @@
 
 ;;(apply index "b2")
 
-(display-board (apply-move (initial-board) ["b2" "b3"]))
-(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
+
+;;(display-board (apply-move (initial-board) ["b2" "b3"]))
+;;(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 
@@ -595,8 +596,8 @@
            option-state)]
     [(first move-seq) (next move-seq)]))
 
-(let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
-  (display-board last-board))
+;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
+;;   (display-board last-board))
 ;; => [move option-state]
 
 ;; -------------- rendering

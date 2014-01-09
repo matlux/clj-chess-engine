@@ -44,6 +44,16 @@
    \P \P \P \P \- \P \P \P
    \R \N \B \- \K \- \N \R])
 
+(defn in-check-test []  ;; it's blacks turn, king is in check. no move will save him => check mate
+  [\r \- \b \q \- \b \n \r
+   \p \p \p \p \k \Q \p \p
+   \- \- \n \- \- \p \- \-
+   \- \- \- \- \p \- \- \-
+   \- \- \B \- \P \- \- \-
+   \- \- \- \- \- \- \- \-
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \N \R])
+
 
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
@@ -488,6 +498,8 @@
 
 ;;---- move validation
 
+
+
 (defn possible-moves [^PersistentVector board ^String pos]
   (getMoves (convert2obj board pos)))
 ;; => #{"e4" "e3"}
@@ -511,6 +523,50 @@
 ;(all-possible-moves (initial-board) true false)
 ;(count (all-possible-moves (initial-board) true false))
 
+(defn king-pos [board king-white?]
+  (let [king (if king-white? \K \k)]
+    (->> ((->>  (group-by #(second %) (board2xy-map-piece board)) (into {})) king) ffirst coord2pos)))
+
+(king-pos (check-mate-test) false)
+
+(defn check? [board white-king? castled?]
+  (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
+        opposite-king (king-pos board white-king?)]
+    (some #(= % opposite-king) (map #(second %) opposite-moves))))
+
+;;(check? (check-mate-test) false false)
+(check? (initial-board) false false)
+
+
+;; -------------- rendering
+
+;;(def ^:const board (vec (range 8)))
+
+
+;;(c2dto1d [1 1])
+;;(c1dto2d 63)
+
+(defn render-board [board-state]
+  (let [line "+---+---+---+---+---+---+---+---+"
+        pieces-pos board-state ;(into {} board-state)
+        ]
+    (apply str "\n" line "\n"
+           (map #(let [pos (c1dto2d (dec %))
+                       c (get pieces-pos pos " ")]
+                   (if (zero? (mod % 8))
+                           (format "| %s |\n%s\n" c line)
+                           (format "| %s " c))) (range 1 65)))))
+
+
+(def init-board-state (char2state (initial-board)))
+
+
+(defn display-board [board]
+  (print (render-board (char2state board))))
+
+;(display-board init-board-state)
+
+;(display-board '([[1 0] "p"] [[2 2] "*"] [[0 1] "&"]))
 
 ;;----- change state of board (make moves)
 
@@ -528,11 +584,20 @@
 ;;(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
+(defn all-possible-moves-with-in-check [board white-turn? castle?]
+  (let [possible-moves (all-possible-moves board white-turn? castle?)
+        f (fn [move] (let [possible-new-board (apply-move board move)]
+                      (not (check? possible-new-board white-turn? castle?))))]
+    (filter f possible-moves)))
+
+(all-possible-moves-with-in-check (check-mate-test) false false)
+(all-possible-moves-with-in-check (in-check-test) false false)
 
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
-  (let [moves (all-possible-moves board white-turn? castle?)]
+  (let [;in-check? (check? board (not white-turn?) false)
+        moves (all-possible-moves-with-in-check board white-turn? castle?)]
     (some #(= move %) moves)))
 
 ;;(is-move-valid? (initial-board) true false ["b2" "b3"])
@@ -546,19 +611,6 @@
 (defn apply-move-safe  [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
   (if (is-move-valid? board white-turn? castle? move) (apply-move (initial-board) move)))
 
-(defn king-pos [board king-white?]
-  (let [king (if king-white? \K \k)]
-    (->> ((->>  (group-by #(second %) (board2xy-map-piece board)) (into {})) king) ffirst coord2pos)))
-
-(king-pos (check-mate-test) false)
-
-(defn check? [board white-king? castled?]
-  (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
-        opposite-king (king-pos board white-king?)]
-    (some #(= % opposite-king) (map #(second %) opposite-moves))))
-
-;;(check? (check-mate-test) false false)
-(check? (initial-board) false false)
 
 (defn forfeit [white-turn?]
   (if white-turn? [0 1] [1 0]))
@@ -596,43 +648,6 @@
            option-state)]
     [(first move-seq) (next move-seq)]))
 
-;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
-;;   (display-board last-board))
+ (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
+   (display-board last-board))
 ;; => [move option-state]
-
-;; -------------- rendering
-
-;;(def ^:const board (vec (range 8)))
-
-
-;;(c2dto1d [1 1])
-;;(c1dto2d 63)
-
-(defn render-board [board-state]
-  (let [line "+---+---+---+---+---+---+---+---+"
-        pieces-pos board-state ;(into {} board-state)
-        ]
-    (apply str "\n" line "\n"
-           (map #(let [pos (c1dto2d (dec %))
-                       c (get pieces-pos pos " ")]
-                   (if (zero? (mod % 8))
-                           (format "| %s |\n%s\n" c line)
-                           (format "| %s " c))) (range 1 65)))))
-
-
-(def init-board-state (char2state (initial-board)))
-
-
-(defn display-board [board]
-  (print (render-board (char2state board))))
-
-
-
-
-
-
-
-
-;(display-board init-board-state)
-
-;(display-board '([[1 0] "p"] [[2 2] "*"] [[0 1] "&"]))

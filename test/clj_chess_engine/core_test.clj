@@ -24,7 +24,7 @@
           true true]))))
 
 (deftest a-invalid-move-test
-  (testing "playing a check mate scenario."
+  (testing "invalid move."
     (is (=
          (play-scenario  [["e2" "e4"] ["e7" "e5"]
                           ["d1" "h5"] ["d7" "d6"]
@@ -45,7 +45,7 @@
           true false]))))
 
 (deftest cannot-move-into-check-case-test
-  (testing "playing a check mate scenario."
+  (testing "cannot move into check mate."
     (is (=
          (play-scenario  [["e2" "e4"] ["e7" "e5"]
                           ["d1" "h5"] ["f7" "f6"]

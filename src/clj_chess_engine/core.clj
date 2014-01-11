@@ -64,6 +64,16 @@
    \P \P \P \P \- \P \P \P
    \R \N \B \- \K \- \N \R])
 
+(defn bug-test []  ;; it's blacks turn
+  [\r \n \b \q \k \b \n \r
+   \p \p \p \p \- \p \p \p
+   \- \- \- \- \- \- \- \-
+   \- \- \- \- \p \- \- \Q
+   \- \- \B \- \P \- \- \-
+   \- \- \- \- \- \- \- \-
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \N \R])
+
 
 
 (def ^:dynamic *file-key* \a)
@@ -542,11 +552,12 @@
 
 (defn check? [board white-king? castled?]
   (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
-        opposite-king (king-pos board white-king?)]
-    (some #(= % opposite-king) (map #(second %) opposite-moves))))
+        king (king-pos board white-king?)]
+    (some #(= % king) (map #(second %) opposite-moves))))
 
 ;;(check? (check-mate-test) false false)
 (check? (initial-board) false false)
+(check? (bug-test) false false)
 
 
 ;; -------------- rendering
@@ -615,9 +626,19 @@
 ;; => true
 ;;(is-move-valid? (initial-board) true false nil)
 ;; => false
+(is-move-valid? (bug-test) false false ["b8" "a6"])
+(check? (bug-test) true false)
 ;; (defmacro --> [m firstkey & keys]
 ;;   (let [a (map #(list 'get %) keys)]
 ;;     `(-> (~m ~firstkey) ~@a)))
+
+(defn check-mate? [^PersistentVector board ^Boolean white-turn? ^Boolean castle?]
+  (->> (all-possible-moves-with-in-check board white-turn? castle?) count zero?))
+;(check-mate? (check-mate-test) false false)
+;(check-mate? (in-check-test) false false)
+
+
+
 
 (defn apply-move-safe  [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector move]
   (if (is-move-valid? board white-turn? castle? move) (apply-move (initial-board) move)))
@@ -633,9 +654,11 @@
                [(f1 board white-turn? white-castled? in-check? (first move-history) state-f1) white-castled?]
                [(f2 board white-turn? black-castled? in-check? (first move-history) state-f2) black-castled?])
         valid? (is-move-valid? board white-turn? false move)
-        new-history (conj move-history move)]
+        new-history (conj move-history move)
+        cmate (check-mate? board white-turn? false)]
+    (display-board board)
     (if (not valid?)
-      [(forfeit white-turn?) new-history board true]
+      [(forfeit white-turn?) new-history board true (if cmate (do (println "check-mate!") true) false)]
       (if white-turn?
         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
@@ -644,21 +667,71 @@
 (defn play-game [board f1 f2]
   (play-game-rec board f1 f2 true false false [] nil nil)
   )
-;; => [score move-history last-board invalid-move?]
+;; => [score move-history last-board invalid-move? check-mate?]
 ;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]
 
+
+
+(defn every-nth [coll n]
+  (map (fn [[i e]] e) (filter (fn [[i e]] (zero? (mod i n))) (map-indexed (fn [i e] [i e]) coll))))
+
+(every-nth [2 3 4] 2)
+
+(defn- create-fn [moves]
+  (fn [board am-i-white? have-i-castled? in-check? last-move option-state]
+      (let [move-seq (if (nil? option-state)
+                       moves
+                       option-state)]
+        [(first move-seq) (next move-seq)])))
+
+(defn create-fns-from-scenario [moves]
+  (let [white-moves (every-nth moves 2)
+        black-moves (every-nth (drop 1 moves) 2)]
+    [(create-fn white-moves)
+     (create-fn black-moves)]))
+
+
+
+(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
+   (play-game (initial-board) f1 f2)))
+
+
+;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]])
+;; => check-mate
+;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
+;; => invalid move
+
 (defn f1 [board am-i-white? have-i-castled? in-check? last-move option-state]
-  (let [move-seq (if (nil? option-state)
-           (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-           option-state)]
-    [(first move-seq) (next move-seq)]))
+                            (let [move-seq (if (nil? option-state)
+                                             (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                                             option-state)]
+                              [(first move-seq) (next move-seq)]))
 
 (defn f2 [board am-i-white? have-i-castled? in-check? last-move option-state]
-  (let [move-seq (if (nil? option-state)
-           (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"] ["e8" "e7"])
+  (let [b board
+        move-seq (if (nil? option-state)
+           (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 
- (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
-   (display-board last-board))
+;;study this case cause it's bugged
+ ;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
+ ;;   (display-board last-board))
 ;; => [move option-state]
+
+
+;;---- interesting case
+;; (defn f1a [board am-i-white? have-i-castled? in-check? last-move option-state]
+;;   (let [move-seq (if (nil? option-state)
+;;            (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+;;            option-state)]
+;;     [(first move-seq) (next move-seq)]))
+
+;; (defn f2a [board am-i-white? have-i-castled? in-check? last-move option-state]
+;;   (let [move-seq (if (nil? option-state)
+;;            (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"] ["e8" "e7"])
+;;            option-state)]
+;;     [(first move-seq) (next move-seq)]))
+
+ ;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1a f2a)]
+ ;;   (display-board last-board))

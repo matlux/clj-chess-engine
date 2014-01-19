@@ -613,6 +613,7 @@
 
 (all-possible-moves-with-in-check (check-mate-test) false false)
 (all-possible-moves-with-in-check (in-check-test) false false)
+(filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check (could-become-in-check-test) false false))
 
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
@@ -671,10 +672,8 @@
 
 
 
-(defn every-nth [coll n]
+(defn- every-nth [coll n]
   (map (fn [[i e]] e) (filter (fn [[i e]] (zero? (mod i n))) (map-indexed (fn [i e] [i e]) coll))))
-
-(every-nth [2 3 4] 2)
 
 (defn- create-fn [moves]
   (fn [board am-i-white? have-i-castled? in-check? last-move option-state]
@@ -717,20 +716,3 @@
  ;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
  ;;   (display-board last-board))
 ;; => [move option-state]
-
-
-;;---- interesting case
-;; (defn f1a [board am-i-white? have-i-castled? in-check? last-move option-state]
-;;   (let [move-seq (if (nil? option-state)
-;;            (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-;;            option-state)]
-;;     [(first move-seq) (next move-seq)]))
-
-;; (defn f2a [board am-i-white? have-i-castled? in-check? last-move option-state]
-;;   (let [move-seq (if (nil? option-state)
-;;            (list ["e7" "e5"] ["f7" "f6"] ["b8" "c6"] ["e8" "e7"])
-;;            option-state)]
-;;     [(first move-seq) (next move-seq)]))
-
- ;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1a f2a)]
- ;;   (display-board last-board))

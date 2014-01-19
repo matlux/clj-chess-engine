@@ -79,10 +79,10 @@
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
 
-(defn- file-component [file]
+(defn file-component [file]
   (- (int file) (int *file-key*)))
 
-(defn- rank-component [rank]
+(defn rank-component [rank]
   (->> (int *rank-key*)
        (- (int rank))
        (- 8)
@@ -117,13 +117,13 @@
 ;(coord2rank 5)
 
 ;(rank-coord \1)
-(defn- pos2coord [^String pos]
+(defn pos2coord [^String pos]
   (let [[file rank] pos
         x (file2coord file)
         y (rank2coord rank)]
     [x y]))
 
-(defn- coord2pos [[x y]]
+(defn coord2pos [[x y]]
   (let [
         file (coord2file x)
         rank (coord2rank y)]
@@ -140,26 +140,26 @@
 (defn lookup-xy [^PersistentVector board ^PersistentVector pos]
   (lookup board (coord2pos pos)))
 
-;; (file-component \a)
+;; (file-component \b)
 ;;(rank-component \1)
-;; (lookup (initial-board) "a1")
+;; (lookup (initial-board) "e5")
 ;;=> \R
 ;;(lookup-xy (initial-board) [0 7])
 
 ;; ------------- all possible moves
 
-(defn- is-white? [^Character piece]
+(defn is-white? [^Character piece]
   (Character/isUpperCase piece))
-(defn- is-black? [^Character piece]
+(defn is-black? [^Character piece]
   (Character/isLowerCase piece))
-(defn- is-piece? [^Character piece]
+(defn is-piece? [^Character piece]
   (Character/isLetter piece))
 
 
 (defprotocol Piece
   (getMoves [this]))
 
-;;(pos2coord "h3")
+;;(pos2coord "e5")
 
 (defn- valid-move? [[x y]]
   (and (< x 8)
@@ -181,8 +181,7 @@
 (collid-oposite? (initial-board) true [2 7])
 
 
-;(collid-self? (initial-board) false [0 7])
-;(Character/isLowerCase \-)
+;(collid-self? (initial-board) true [0 7])
 
 (defn- is-vertical? [[x1 y1] [x2 y2]]
   (zero? (- x1 x2)))

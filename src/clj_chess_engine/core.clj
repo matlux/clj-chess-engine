@@ -598,7 +598,6 @@
 
 ;;----- change state of board (make moves)
 
-;;todo: convert map back to vector of char or manipulate board directly
 (defn apply-move [^PersistentVector board ^PersistentVector [from to]]
   (let [piece (lookup board from)]
     (-> (assoc board (apply index from) \-)

@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clj-chess-engine.core :refer :all]))
 
-(def could-become-in-check-board ;; it's white turn
+(def could-become-in-check-board ;; it's black's turn
   [\r \- \b \q \k \b \n \r
    \p \p \p \p \- \p \p \p
    \- \- \n \- \- \- \- \-
@@ -69,19 +69,19 @@
     (is (= (pos2coord "h1")
            [7 7]))))
 
-(deftest test-pos2coord7
+(deftest test-coord2pos1
   (testing "convertion xy coordinates to algebraic notation"
     (is (= (coord2pos [7 7])
            "h1"))))
-(deftest test-pos2coord8
+(deftest test-coord2pos2
   (testing "convertion xy coordinates to algebraic notation"
     (is (= (coord2pos [0 7])
            "a1"))))
-(deftest test-pos2coord9
+(deftest test-coord2pos3
   (testing "convertion xy coordinates to algebraic notation"
     (is (= (coord2pos [7 0])
            "h8"))))
-(deftest test-pos2coord10
+(deftest test-coord2pos4
   (testing "convertion xy coordinates to algebraic notation"
     (is (= (coord2pos [4 3])
            "e5"))))
@@ -111,16 +111,16 @@
     (is (= (is-black? \-)
            false))))
 
-(deftest test-color7
-  (testing "test color"
+(deftest test-presence-of-piece
+  (testing "test absence of piece"
     (is (= (is-piece? \-)
            false))))
-(deftest test-color8
-  (testing "test color"
+(deftest test-presence-of-piece2
+  (testing "test presence of piece - with a white piece"
     (is (= (is-piece? \P)
            true))))
-(deftest test-color9
-  (testing "test color"
+(deftest test-presence-of-piece3
+  (testing "test presence of piece - with a black piece"
     (is (= (is-piece? \k)
            true))))
 

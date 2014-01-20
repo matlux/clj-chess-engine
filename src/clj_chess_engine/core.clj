@@ -611,9 +611,9 @@
                       (not (check? possible-new-board white-turn? castle?))))]
     (filter f possible-moves)))
 
-(all-possible-moves-with-in-check (check-mate-test) false false)
-(all-possible-moves-with-in-check (in-check-test) false false)
-(filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check (could-become-in-check-test) false false))
+;(all-possible-moves-with-in-check (check-mate-test) false false)
+;(all-possible-moves-with-in-check (in-check-test) false false)
+;(filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check (could-become-in-check-test) false false))
 
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
@@ -626,8 +626,8 @@
 ;; => true
 ;;(is-move-valid? (initial-board) true false nil)
 ;; => false
-(is-move-valid? (bug-test) false false ["b8" "a6"])
-(check? (bug-test) true false)
+;;(is-move-valid? (bug-test) false false ["b8" "a6"])
+;;(check? (bug-test) true false)
 ;; (defmacro --> [m firstkey & keys]
 ;;   (let [a (map #(list 'get %) keys)]
 ;;     `(-> (~m ~firstkey) ~@a)))
@@ -646,23 +646,28 @@
 
 (defn forfeit [white-turn?]
   (if white-turn? [0 1] [1 0]))
+(def opposite-color-wins forfeit)
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
-  (let [in-check? (check? board (not white-turn?) false)
-        [[move new-state] castled?] (if white-turn?
-               [(f1 board white-turn? white-castled? in-check? (first move-history) state-f1) white-castled?]
-               [(f2 board white-turn? black-castled? in-check? (first move-history) state-f2) black-castled?])
-        valid? (is-move-valid? board white-turn? false move)
-        new-history (conj move-history move)
-        cmate (check-mate? board white-turn? false)]
-    (display-board board)
-    (if (not valid?)
-      [(forfeit white-turn?) new-history board true (if cmate (do (println "check-mate!") true) false)]
-      (if white-turn?
-        (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
-        (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
-      )))
+  (if (check-mate? board white-turn? false)
+      (do
+        (println "check-mate!")
+        [(opposite-color-wins white-turn?) move-history board false true])
+      (let [in-check? (check? board (not white-turn?) false)
+         [[move new-state] castled?] (if white-turn?
+                                       [(f1 board white-turn? white-castled? in-check? (first move-history) state-f1) white-castled?]
+                                       [(f2 board white-turn? black-castled? in-check? (first move-history) state-f2) black-castled?])
+         valid? (is-move-valid? board white-turn? false move)
+         new-history (conj move-history move)
+         cmate (check-mate? board white-turn? false)]
+     (display-board board)
+     (if (not valid?)
+       [(forfeit white-turn?) new-history board true false]
+       (if white-turn?
+         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
+         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
+       ))))
 
 (defn play-game [board f1 f2]
   (play-game-rec board f1 f2 true false false [] nil nil)

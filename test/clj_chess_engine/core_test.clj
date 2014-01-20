@@ -266,7 +266,7 @@
          [[1 0] [["e2" "e4"] ["e7" "e5"]
                  ["d1" "h5"] ["d7" "d6"]
                  ["f1" "c4"] ["b8" "c6"]
-                 ["h5" "f7"] ["e8" "e7"]]
+                 ["h5" "f7"] ]
           [\r \- \b \q \k \b \n \r
            \p \p \p \- \- \Q \p \p
            \- \- \n \p \- \- \- \-
@@ -299,7 +299,7 @@
           true false]))))
 
 (deftest cannot-move-into-check-case-game
-  (testing "black cannot move into check mate but makes an invalid move."
+  (testing "black cannot move it's pawn on f7 because it will get into check mate. However it decides to make an invalid move [f7 f6] anyway."
     (is (=
          (play-scenario  [["e2" "e4"] ["e7" "e5"]
                           ["d1" "h5"] ["f7" "f6"]

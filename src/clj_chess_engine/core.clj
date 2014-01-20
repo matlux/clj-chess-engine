@@ -614,7 +614,7 @@
 ;;(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
-(defn all-possible-moves-with-in-check [board white-turn? castle?]
+(defn all-possible-moves-with-in-check [board white-turn? castle? history]
   (let [possible-moves (all-possible-moves board white-turn? castle?)
         f (fn [move] (let [possible-new-board (apply-move board move)]
                       (not (check? possible-new-board white-turn? castle?))))]
@@ -628,9 +628,11 @@
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
   (let [;in-check? (check? board (not white-turn?) false)
-        moves (all-possible-moves-with-in-check board white-turn? castle?)]
-    (some #(= move %) moves)))
+        moves (all-possible-moves-with-in-check board white-turn? castle? history)]
+    (not (not (some #(= move %) moves)))))
 
+;;(is-move-valid? (en-passant-check-test) true false ["d5" "c4"])
+;; => true
 ;;(is-move-valid? (initial-board) true false ["b2" "b3"])
 ;; => true
 ;;(is-move-valid? (initial-board) true false nil)
@@ -641,9 +643,9 @@
 ;;   (let [a (map #(list 'get %) keys)]
 ;;     `(-> (~m ~firstkey) ~@a)))
 
-(defn check-mate? [^PersistentVector board ^Boolean white-turn? ^Boolean castle?]
-  (->> (all-possible-moves-with-in-check board white-turn? castle?) count zero?))
-;(check-mate? (check-mate-test) false false)
+(defn check-mate? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history]
+  (->> (all-possible-moves-with-in-check board white-turn? castle? history) count zero?))
+;(check-mate? (check-mate-test) false false [])
 ;(check-mate? (in-check-test) false false)
 
 
@@ -659,7 +661,7 @@
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
-  (if (check-mate? board white-turn? false)
+  (if (check-mate? board white-turn? false move-history)
       (do
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
@@ -669,8 +671,8 @@
                                        [(f2 board white-turn? black-castled? in-check? move-history state-f2) black-castled?])
          valid? (is-move-valid? board white-turn? false move-history move)
          new-history (conj move-history move)
-         cmate (check-mate? board white-turn? false)]
-     (display-board board)
+         cmate (check-mate? board white-turn? false move-history)]
+     ;(display-board board)
      (if (not valid?)
        [(forfeit white-turn?) new-history board :invalid-move]
        (if white-turn?
@@ -732,4 +734,4 @@
 ;; => [move option-state]
 
 
- (filter (fn [[from _]] (= from "d5")) (all-possible-moves-with-in-check (en-passant-check-test) white false))
+;; (filter (fn [[from _]] (= from "d5")) (all-possible-moves-with-in-check (en-passant-check-test) white false []))

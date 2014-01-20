@@ -384,6 +384,7 @@
       (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
 
 (getMoves (Queen. (test-board2) "d3" true))
+(getMoves (Queen. (could-become-in-check-test) "h5" true))
 ;;=> ("a3" "b3" "c4" "c3" "d7" "d6" "d5" "d4" "d2" "e4" "e3" "e2" "f5" "f3" "g6" "g3" "h7" "h3")
 
 ;;---- Rook

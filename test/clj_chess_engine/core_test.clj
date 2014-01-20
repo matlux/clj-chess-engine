@@ -126,45 +126,45 @@
 
 (deftest test-opposite-collision
   (testing "test collision - white piece is about to move onto c1"
-    (is (= (collid-oposite? (initial-board) true [2 7])
+    (is (= (collid-oposite? (initial-board) white-turn [2 7])
            false))))
 (deftest test-opposite-collision2
   (testing "test collision - black piece is about to move onto c1"
-    (is (= (collid-oposite? (initial-board) false [2 7])
+    (is (= (collid-oposite? (initial-board) black-turn [2 7])
            true))))
 (deftest test-self-collision
   (testing "test collision - white piece is about to move onto c8"
-    (is (= (collid-self? (initial-board) true [2 0])
+    (is (= (collid-self? (initial-board) white-turn [2 0])
            false))))
 (deftest test-self-collision1
   (testing "test collision - black piece is about to move onto c8"
-    (is (= (collid-self? (initial-board) false [2 0])
+    (is (= (collid-self? (initial-board) black-turn [2 0])
            true))))
 (deftest test-self-collision2
   (testing "test collision - black piece is about to move onto c3"
-    (is (= (collid-self? (initial-board) false [2 2])
+    (is (= (collid-self? (initial-board) black-turn [2 2])
            false))))
 
 
 (deftest test-self-collision3
   (testing "test collision - white piece is about to move onto c1"
-    (is (= (collid-self? (initial-board) true [2 7])
+    (is (= (collid-self? (initial-board) white-turn [2 7])
            true))))
 (deftest test-self-collision4
   (testing "test collision - black piece is about to move onto c1"
-    (is (= (collid-self? (initial-board) false [2 7])
+    (is (= (collid-self? (initial-board) black-turn [2 7])
            false))))
 (deftest test-self-collision5
   (testing "test collision - white piece is about to move onto c1"
-    (is (= (collid-self? (initial-board) true [2 7])
+    (is (= (collid-self? (initial-board) white-turn [2 7])
            true))))
 (deftest test-self-collision6
   (testing "test collision - black piece is about to move onto c1"
-    (is (= (collid-self? (initial-board) false [2 7])
+    (is (= (collid-self? (initial-board) black-turn [2 7])
            false))))
 (deftest test-self-collision7
   (testing "test collision - black piece is about to move onto c3"
-    (is (= (collid-self? (initial-board) false [2 5])
+    (is (= (collid-self? (initial-board) black-turn [2 5])
            false))))
 
 (deftest test-any-collision
@@ -203,56 +203,56 @@
            \-))))
 
 (deftest test-find-king-position
-  (testing "find king"
-    (is (= (king-pos check-mate-board false))
+  (testing "find black king"
+    (is (= (king-pos check-mate-board black))
         "e8")))
 
 (deftest test-all-possible-move-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (all-possible-moves (initial-board) true false)
+    (is (= (all-possible-moves (initial-board) white false)
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 
 (deftest test-all-possible-move-with-in-check-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (all-possible-moves-with-in-check (initial-board) true false)
+    (is (= (all-possible-moves-with-in-check (initial-board) white false)
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 (deftest test-all-possible-move-with-in-check1
   (testing "black turn, only one move is allowed"
-    (is (= (all-possible-moves-with-in-check in-check-board false false)
+    (is (= (all-possible-moves-with-in-check in-check-board black false)
            '(["e7" "d6"])))))
 (deftest test-all-possible-move-with-in-check2
   (testing "black's turn, shouldn't be able to move pawn on f7 because it would put itself into check"
-    (is (= (filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check could-become-in-check-board false false))
+    (is (= (filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check could-become-in-check-board black false))
            '()))))
 (deftest test-all-possible-move-with-in-check3
   (testing "black's turn, no possibility"
-    (is (= (all-possible-moves-with-in-check check-mate-board false false)
+    (is (= (all-possible-moves-with-in-check check-mate-board black false)
            '()))))
 
 (deftest test-check-detection
   (testing "that a check is not detected"
-    (is (= (check? (initial-board) false false)
+    (is (= (check? (initial-board) black false)
            false))))
 (deftest test-check-detection2
   (testing "that a check is detected"
-    (is (= (check? in-check-board false false)
+    (is (= (check? in-check-board black false)
            true))))
 (deftest test-check-detection3
   (testing "that a check is detected"
-    (is (= (check? check-mate-board false false)
+    (is (= (check? check-mate-board black false)
            true))))
 
 (deftest test-check-mate-detection
   (testing "check-mate not detected"
-    (is (= (check-mate? (initial-board) false false)
+    (is (= (check-mate? (initial-board) black false)
            false))))
 (deftest test-check-mate-detection
   (testing "in check but check-mate not detected"
-    (is (= (check-mate? in-check-board false false)
+    (is (= (check-mate? in-check-board black false)
            false))))
 (deftest test-check-mate-detection
   (testing "check-mate is detected"
-    (is (= (check-mate? check-mate-board false false)
+    (is (= (check-mate? check-mate-board black false)
            true))))
 
 

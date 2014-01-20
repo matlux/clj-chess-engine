@@ -81,6 +81,8 @@
 
 (def white-turn true)
 (def black-turn false)
+(def black black-turn)
+(def white white-turn)
 (def last-move-was-invalid true)
 (def last-move-was-valid false)
 (def check-mate true)

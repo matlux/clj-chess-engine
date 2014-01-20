@@ -2,6 +2,26 @@
   (:require [clojure.test :refer :all]
             [clj-chess-engine.core :refer :all]))
 
+(def en-passant-check-board ;; it's white's turn
+  [\r \- \b \q \k \b \n \r
+   \p \p \- \- \- \p \p \p
+   \- \- \- \- \- \- \- \-
+   \n \- \p \P \p \- \- \Q
+   \- \- \B \- \- \- \- \-
+   \- \- \- \- \- \- \- \N
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \- \R])
+
+(def castle-check-board ;; it's white's turn
+  [\r \- \b \q \k \b \n \r
+   \p \p \- \- \- \p \p \p
+   \- \- \- \- \- \- \- \-
+   \n \- \p \P \p \- \- \Q
+   \- \- \B \- \- \- \- \-
+   \- \- \- \- \- \- \- \N
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \- \R])
+
 (def could-become-in-check-board ;; it's black's turn
   [\r \- \b \q \k \b \n \r
    \p \p \p \p \- \p \p \p
@@ -228,6 +248,12 @@
   (testing "black's turn, no possibility"
     (is (= (all-possible-moves-with-in-check check-mate-board black false)
            '()))))
+
+(deftest test-all-possible-move-with-in-check-enpassant
+  (testing "black's turn, shouldn't be able to move pawn on f7 because it would put itself into check"
+    (is (true? (some (fn [move] (= move ["d5" "c6"])) (all-possible-moves-with-in-check en-passant-check-board white false))
+           ))))
+
 
 (deftest test-check-detection
   (testing "that a check is not detected"

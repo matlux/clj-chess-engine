@@ -79,6 +79,13 @@
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
 
+(def white-turn true)
+(def black-turn false)
+(def last-move-was-invalid true)
+(def last-move-was-valid false)
+(def check-mate true)
+
+
 (defn file-component [file]
   (- (int file) (int *file-key*)))
 
@@ -552,7 +559,7 @@
 (defn check? [board white-king? castled?]
   (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
         king (king-pos board white-king?)]
-    (some #(= % king) (map #(second %) opposite-moves))))
+    (not (not (some #(= % king) (map #(second %) opposite-moves))))))
 
 ;;(check? (check-mate-test) false false)
 (check? (initial-board) false false)
@@ -653,7 +660,7 @@
   (if (check-mate? board white-turn? false)
       (do
         (println "check-mate!")
-        [(opposite-color-wins white-turn?) move-history board false true])
+        [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) false)
          [[move new-state] castled?] (if white-turn?
                                        [(f1 board white-turn? white-castled? in-check? (first move-history) state-f1) white-castled?]
@@ -663,7 +670,7 @@
          cmate (check-mate? board white-turn? false)]
      (display-board board)
      (if (not valid?)
-       [(forfeit white-turn?) new-history board true false]
+       [(forfeit white-turn?) new-history board :invalid-move]
        (if white-turn?
          (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
          (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))

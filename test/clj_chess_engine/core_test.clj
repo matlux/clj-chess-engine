@@ -229,7 +229,7 @@
 
 (deftest test-all-possible-move-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (all-possible-moves (initial-board) white false)
+    (is (= (all-possible-moves (initial-board) white false [])
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 
 (deftest test-all-possible-move-with-in-check-init
@@ -251,26 +251,25 @@
 
 (deftest test-all-possible-move-with-in-check-enpassant
   (testing ""
-    (is (true? (some (fn [move] (= move ["d5" "c6"])) (all-possible-moves-with-in-check en-passant-check-board white false []))
-           ))))
+    (is (true? (some (fn [move] (= move ["d5" "c6"])) (all-possible-moves-with-in-check en-passant-check-board white false [["c7" "c5"]]))))))
 
 (deftest test-enpassant-valid
   (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false [["c7" "c5"]] ["d5" "c4"])
+    (is (is-move-valid? en-passant-check-board white false [["c7" "c5"]] ["d5" "c6"])
          true)))
 
 
 (deftest test-check-detection
   (testing "that a check is not detected"
-    (is (= (check? (initial-board) black false)
+    (is (= (check? (initial-board) black false [])
            false))))
 (deftest test-check-detection2
   (testing "that a check is detected"
-    (is (= (check? in-check-board black false)
+    (is (= (check? in-check-board black false [])
            true))))
 (deftest test-check-detection3
   (testing "that a check is detected"
-    (is (= (check? check-mate-board black false )
+    (is (= (check? check-mate-board black false [])
            true))))
 
 (deftest test-check-mate-detection

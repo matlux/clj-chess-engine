@@ -164,6 +164,26 @@
 (defn is-piece? [^Character piece]
   (Character/isLetter piece))
 
+(defn- is-knight? [ piece]
+  (or (= piece \N)
+      (= piece \n)))
+(defn- is-bishop? [ piece]
+  (or (= piece \B)
+      (= piece \b)))
+(defn- is-queen? [ piece]
+  (or (= piece \Q)
+      (= piece \q)))
+(defn- is-king? [ piece]
+  (or (= piece \K)
+      (= piece \k)))
+(defn- is-rook? [ piece]
+  (or (= piece \R)
+      (= piece \r)))
+(defn- is-pawn? [ piece]
+  (or (= piece \P)
+      (= piece \p)))
+
+
 
 (defprotocol Piece
   (getMoves [this]))
@@ -271,7 +291,37 @@
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
 
 ;;---- pawn moves
-(defn- pawn-moves [board white? x y]
+
+(defn- en-passant? [board white? last-move diag x y]
+  (when (not (nil? last-move))
+    (let [[op opposite-start-rank] (if white? [+ 1] [- 6])
+         [from to] last-move
+         pawn? (is-pawn? (lookup board to))
+         [dx dy] diag
+         [fx fy] (pos2coord from)
+         [tx ty] (pos2coord to)]
+     [fx fy tx ty pawn?]
+     (and pawn?
+          (= fx tx dx)
+          (= fy opposite-start-rank)
+          (= ty (op fy 2) (op dy 1))))))
+;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 2] 3 3)
+;; => true
+;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 1] 3 2)
+;; => false
+;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 3] 3 4)
+;; => false
+;;(en-passant? (en-passant-check-test) white ["c7" "c4"] [2 2] 3 3)
+;; => false
+;;(en-passant? (en-passant-check-test) white ["e7" "e5"] [4 2] 3 3)
+;; => true
+;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [4 2] 3 3)
+;; => false
+;;(en-passant? (en-passant-check-test) white nil [4 2] 3 3)
+;; => false
+
+
+(defn- pawn-moves [board white? last-move x y]
   (let [[op start-rank] (if white? [- 6] [+ 1])
         right-diag [(+ x 1) (op y 1)]
         left-diag [(- x 1) (op y 1)]
@@ -279,9 +329,13 @@
         front2 [x (op y 2)]
         moves [
                (when (and (valid-move? right-diag)
-                          (collid-oposite? board white? right-diag)) right-diag)
+                          (or
+                           (collid-oposite? board white? right-diag)
+                           (en-passant? board white? last-move right-diag x y))) right-diag)
                (when (and (valid-move? left-diag)
-                          (collid-oposite? board white? left-diag)) left-diag)
+                          (or
+                           (collid-oposite? board white? left-diag)
+                           (en-passant? board white? last-move left-diag x y))) left-diag)
                (when (not (collid? board front)) front)
                (when (and
                       (not (collid? board front))
@@ -291,19 +345,21 @@
     (filter (comp not nil?) moves)))
 
 ;;(not (= (lookup-xy (initial-board) [2 1]) \-))
-(pawn-moves (initial-board) false 1 1)
+;;(pawn-moves (initial-board) false [] 1 1)
+(map coord2pos (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
 
 
 
 
-(count (pawn-moves (initial-board) true 2 2))
+;;(count (pawn-moves (initial-board) white [] 2 2))
 ;(nothing-between (initial-board) )
 
-(defrecord Pawn [^clojure.lang.PersistentVector board ^String pos ^boolean white?]
+(defrecord Pawn [^clojure.lang.PersistentVector board ^String pos ^boolean white? history]
   Piece
   (getMoves [this]
     (let [[x y] (pos2coord pos)
-          moves (pawn-moves board white? x y)
+          last-move (last history)
+          moves (pawn-moves board white? last-move x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
       (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
 
@@ -314,6 +370,10 @@
 ;; =>("a6" "a5")
 ;;(getMoves (Pawn. (test-board2) "a6" false))
 ;; =>("b5" "a5")
+;;(getMoves (Pawn. (test-board2) "a6" false))
+;; =>("b5" "a5")
+(getMoves (Pawn. (en-passant-check-test) "d5" true [["c7" "c5"]]))
+;; =>("c6" "d6")
 
 ;;---- King moves
 
@@ -488,24 +548,6 @@
 
 
 
-(defn- is-knight? [ piece]
-  (or (= piece \N)
-      (= piece \n)))
-(defn- is-bishop? [ piece]
-  (or (= piece \B)
-      (= piece \b)))
-(defn- is-queen? [ piece]
-  (or (= piece \Q)
-      (= piece \q)))
-(defn- is-king? [ piece]
-  (or (= piece \K)
-      (= piece \k)))
-(defn- is-rook? [ piece]
-  (or (= piece \R)
-      (= piece \r)))
-(defn- is-pawn? [ piece]
-  (or (= piece \P)
-      (= piece \p)))
 
 (defn- one-color [^PersistentVector board ^Boolean white?]
   (let [color? (if white? is-white? is-black?)]
@@ -513,7 +555,7 @@
 
 (one-color (initial-board) false)
 
-(defn convert2obj [^PersistentVector board ^String pos]
+(defn convert2obj [^PersistentVector board history ^String pos]
   (let [piece (lookup board pos)
         color (is-white? piece)]
     (cond
@@ -522,23 +564,23 @@
      (is-queen? piece) (Queen. board pos color)
      (is-king? piece) (King. board pos color)
      (is-rook? piece) (Rook. board pos color)
-     (is-pawn? piece) (Pawn. board pos color))))
+     (is-pawn? piece) (Pawn. board pos color history))))
 
-(convert2obj (initial-board) "h1")
+;;(convert2obj (initial-board) "h1" [])
 
 ;;---- move validation
 
 
 
-(defn possible-moves [^PersistentVector board ^String pos]
-  (getMoves (convert2obj board pos)))
+(defn possible-moves [^PersistentVector board history ^String pos]
+  (getMoves (convert2obj board history pos)))
 ;; => #{"e4" "e3"}
-(possible-moves (initial-board) "a2")
+(possible-moves (initial-board) [] "a2")
 
 ;; (defn all-possible-moves [board white-turn? castle?]
 ;;   (->> (one-color board white-turn?) board2xy-map-piece (map (fn [[pos-xy c]] (coord2pos pos-xy)))))
 
-(defn all-possible-moves [^PersistentVector board ^Boolean white-turn? ^Boolean castle?]
+(defn all-possible-moves [^PersistentVector board ^Boolean white-turn? ^Boolean castle? history]
   (->> (one-color board white-turn?)
        board2xy-map-piece
        (mapcat
@@ -546,12 +588,12 @@
           (let [pos (coord2pos pos-xy)]
             (map
              (fn [move] [pos move])
-             (possible-moves board pos)))))))
+             (possible-moves board history pos)))))))
 
 ;;(filter #(is-piece? %))
 ;;(map (fn [[pos c]] (possible-moves board pos)))
-;(all-possible-moves (initial-board) true false)
-;(count (all-possible-moves (initial-board) true false))
+;(all-possible-moves (initial-board) true false [])
+;(count (all-possible-moves (initial-board) true false []))
 
 (defn king-pos [board king-white?]
   (let [king (if king-white? \K \k)]
@@ -559,14 +601,14 @@
 
 (king-pos (check-mate-test) false)
 
-(defn check? [board white-king? castled?]
-  (let [opposite-moves (all-possible-moves board (not white-king?) castled?)
+(defn check? [board white-king? castled? history]
+  (let [opposite-moves (all-possible-moves board (not white-king?) castled? history)
         king (king-pos board white-king?)]
     (not (not (some #(= % king) (map #(second %) opposite-moves))))))
 
-;;(check? (check-mate-test) false false)
-;;(check? (initial-board) false false)
-;;(check? (bug-test) false false)
+;;(check? (check-mate-test) false false [])
+;;(check? (initial-board) false false [])
+;;(check? (bug-test) false false [])
 
 
 ;; -------------- rendering
@@ -615,9 +657,9 @@
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 (defn all-possible-moves-with-in-check [board white-turn? castle? history]
-  (let [possible-moves (all-possible-moves board white-turn? castle?)
+  (let [possible-moves (all-possible-moves board white-turn? castle? history)
         f (fn [move] (let [possible-new-board (apply-move board move)]
-                      (not (check? possible-new-board white-turn? castle?))))]
+                      (not (check? possible-new-board white-turn? castle? history))))]
     (filter f possible-moves)))
 
 ;(all-possible-moves-with-in-check (check-mate-test) false false)
@@ -631,13 +673,15 @@
         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
     (not (not (some #(= move %) moves)))))
 
-;;(is-move-valid? (en-passant-check-test) true false ["d5" "c4"])
+;;(is-move-valid? (en-passant-check-test) white false [["c7" "c5"]] ["d5" "c6"])
+;;(all-possible-moves-with-in-check (en-passant-check-test) white false [["c7" "c5"]] )
+;;(is-move-valid? (en-passant-check-test) true false [] ["d5" "c4"])
 ;; => true
-;;(is-move-valid? (initial-board) true false ["b2" "b3"])
+;;(is-move-valid? (initial-board) true false [] ["b2" "b3"])
 ;; => true
-;;(is-move-valid? (initial-board) true false nil)
+;;(is-move-valid? (initial-board) true false [] nil)
 ;; => false
-;;(is-move-valid? (bug-test) false false ["b8" "a6"])
+;;(is-move-valid? (bug-test) false false [] ["b8" "a6"])
 ;;(check? (bug-test) true false)
 ;; (defmacro --> [m firstkey & keys]
 ;;   (let [a (map #(list 'get %) keys)]
@@ -646,7 +690,7 @@
 (defn check-mate? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history]
   (->> (all-possible-moves-with-in-check board white-turn? castle? history) count zero?))
 ;(check-mate? (check-mate-test) false false [])
-;(check-mate? (in-check-test) false false)
+;(check-mate? (in-check-test) false false [])
 
 
 
@@ -665,7 +709,7 @@
       (do
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
-      (let [in-check? (check? board (not white-turn?) false)
+      (let [in-check? (check? board (not white-turn?) false move-history)
          [[move new-state] castled?] (if white-turn?
                                        [(f1 board white-turn? white-castled? in-check? move-history state-f1) white-castled?]
                                        [(f2 board white-turn? black-castled? in-check? move-history state-f2) black-castled?])

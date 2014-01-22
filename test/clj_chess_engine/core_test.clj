@@ -12,6 +12,16 @@
    \P \P \P \P \- \P \P \P
    \R \N \B \- \K \- \- \R])
 
+(def en-passant-check-board2 ;; it's white's turn
+  [\r \- \b \q \k \b \n \r
+   \p \p \- \- \- \p \p \p
+   \- \- \p \- \- \- \- \-
+   \n \- \- \P \p \- \- \Q
+   \- \- \B \- \- \- \- \-
+   \- \- \- \- \- \- \- \N
+   \P \P \P \P \- \P \P \P
+   \R \N \B \- \K \- \- \R])
+
 (def castle-check-board ;; it's white's turn
   [\r \- \b \q \k \b \n \r
    \p \p \- \- \- \p \p \p
@@ -261,9 +271,9 @@
   (testing "test en-passant move validity"
     (is (is-move-valid? en-passant-check-board white false [["d4" "d5"]["e7" "e5"]] ["d5" "e6"])
          true)))
-(deftest test-enpassant-valid3
-  (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false [["d4" "d5"] ["c7" "c6"]] ["d5" "c6"])
+(deftest test-none-enpassant-diagonal-valid3
+  (testing "test diagonal move validity with pawn"
+    (is (is-move-valid? en-passant-check-board2 white false [["d4" "d5"] ["c7" "c6"]] ["d5" "c6"])
          true)))
 
 

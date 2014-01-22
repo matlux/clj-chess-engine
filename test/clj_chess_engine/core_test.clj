@@ -257,6 +257,14 @@
   (testing "test en-passant move validity"
     (is (is-move-valid? en-passant-check-board white false [["c7" "c5"]] ["d5" "c6"])
          true)))
+(deftest test-enpassant-valid2
+  (testing "test en-passant move validity"
+    (is (is-move-valid? en-passant-check-board white false [["d4" "d5"]["e7" "e5"]] ["d5" "e6"])
+         true)))
+(deftest test-enpassant-valid3
+  (testing "test en-passant move validity"
+    (is (is-move-valid? en-passant-check-board white false [["d4" "d5"] ["c7" "c6"]] ["d5" "c6"])
+         true)))
 
 
 (deftest test-check-detection
@@ -377,6 +385,24 @@
                           ["d1" "h5"] ["f7" "f6"]
                           ["f1" "c4"] ["b8" "c6"]
                           ["h5" "f7"] ["e8" "e7"]])
+         [[1 0] [["e2" "e4"] ["e7" "e5"]
+                 ["d1" "h5"] ["f7" "f6"]]
+          [\r \n \b \q \k \b \n \r
+           \p \p \p \p \- \p \p \p
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \p \- \- \Q
+           \- \- \- \- \P \- \- \-
+           \- \- \- \- \- \- \- \-
+           \P \P \P \P \- \P \P \P
+           \R \N \B \- \K \B \N \R]
+          :invalid-move]))))
+
+(deftest en-passant-case-game
+  (testing "black cannot move it's pawn on f7 because it will get into check mate. However it decides to make an invalid move [f7 f6] anyway."
+    (is (=
+         (play-scenario  [["e2" "e4"] ["d7" "d5"]
+                          ["e4" "d5"] ["e7" "e5"]
+                          ["d5" "e6"] ["d5" "e6"] nil])
          [[1 0] [["e2" "e4"] ["e7" "e5"]
                  ["d1" "h5"] ["f7" "f6"]]
           [\r \n \b \q \k \b \n \r

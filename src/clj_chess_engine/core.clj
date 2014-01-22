@@ -76,6 +76,7 @@
 
 
 
+
 (def ^:dynamic *file-key* \a)
 (def ^:dynamic *rank-key* \0)
 
@@ -307,6 +308,8 @@
           (= ty (op fy 2) (op dy 1))))))
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 2] 3 3)
 ;; => true
+;;(en-passant? (en-passant-check-test) white ["c7" "c6"] [2 2] 3 3)
+;; => false
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 1] 3 2)
 ;; => false
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 3] 3 4)
@@ -752,14 +755,26 @@
 
 (defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
    (play-game (initial-board) f1 f2)))
-
-
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]])
 ;; => check-mate
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move
 
-(defn f1 [board am-i-white? have-i-castled? in-check? last-move option-state]
+(defn interactive-f [board am-i-white? have-i-castled? in-check? move-history option-state]
+  (do
+    (display-board board)
+    (println (if am-i-white? "white: " "black: "))
+    (let [move (read-string (read-line))]
+
+     move)))
+
+
+
+;; (play-game (initial-board) interactive-f interactive-f)
+
+
+
+(defn f1 [board am-i-white? have-i-castled? in-check? move-history option-state]
                             (let [move-seq (if (nil? option-state)
                                              (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
                                              option-state)]

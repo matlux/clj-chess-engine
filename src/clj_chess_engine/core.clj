@@ -330,26 +330,33 @@
         left-diag [(- x 1) (op y 1)]
         front [x (op y 1)]
         front2 [x (op y 2)]
-        moves [
+        moves (vector
                (when (and (valid-move? right-diag)
                           (or
                            (collid-oposite? board white? right-diag)
-                           (en-passant? board white? last-move right-diag x y))) right-diag)
+                           (en-passant? board white? last-move right-diag x y)))
+                 (with-meta right-diag {:en-passant true :taken [(+ x 1) y]} ))
                (when (and (valid-move? left-diag)
                           (or
                            (collid-oposite? board white? left-diag)
-                           (en-passant? board white? last-move left-diag x y))) left-diag)
+                           (en-passant? board white? last-move left-diag x y)))
+                 (with-meta left-diag {:en-passant true :taken [(- x 1) y]} ) )
                (when (not (collid? board front)) front)
                (when (and
                       (not (collid? board front))
                       (not (collid? board front2))
                       (= y start-rank)) front2)
-               ]]
+
+               )
+        foobar (dbg (map meta moves))]
     (filter (comp not nil?) moves)))
 
 ;;(not (= (lookup-xy (initial-board) [2 1]) \-))
 ;;(pawn-moves (initial-board) false [] 1 1)
-(map coord2pos (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
+;;(map coord2pos (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
+;;(map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
+;;  (map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["e7" "e5"] 3 3))
+
 
 
 
@@ -646,11 +653,15 @@
 
 ;;----- change state of board (make moves)
 
-(defn apply-move [^PersistentVector board ^PersistentVector [from to]]
-  (let [piece (lookup board from)]
-    (-> (assoc board (apply index from) \-)
-        (assoc (apply index to) piece)
-        )))
+(defn apply-move [^PersistentVector board ^PersistentVector move]
+  (let [[from to] move
+        taken (:taken (meta move))
+        piece (lookup board from)
+        new-board (-> (assoc board (apply index from) \-)
+                      (assoc (apply index to) piece))]
+    (if taken
+      (assoc new-board (apply index (coord2pos taken)) \-)
+      new-board)))
 
 ;;(apply index "b2")
 
@@ -675,6 +686,13 @@
   (let [;in-check? (check? board (not white-turn?) false)
         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
     (not (not (some #(= move %) moves)))))
+
+(defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
+  (let [;in-check? (check? board (not white-turn?) false)
+        moves (all-possible-moves-with-in-check board white-turn? castle? history)]
+    (first (filter #(and (= move %)
+                         (:en-passant (meta %)))
+                   moves))))
 
 ;;(is-move-valid? (en-passant-check-test) white false [["c7" "c5"]] ["d5" "c6"])
 ;;(all-possible-moves-with-in-check (en-passant-check-test) white false [["c7" "c5"]] )
@@ -716,15 +734,17 @@
          [[move new-state] castled?] (if white-turn?
                                        [(f1 board white-turn? white-castled? in-check? move-history state-f1) white-castled?]
                                        [(f2 board white-turn? black-castled? in-check? move-history state-f2) black-castled?])
-         valid? (is-move-valid? board white-turn? false move-history move)
+            valid? (is-move-valid? board white-turn? false move-history move)
+            en-passant-move (move-en-passant move)
+            real-move (if en-passant-move en-passant-move move)
          new-history (conj move-history move)
          cmate (check-mate? board white-turn? false move-history)]
      ;(display-board board)
      (if (not valid?)
        [(forfeit white-turn?) new-history board :invalid-move]
        (if white-turn?
-         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
-         (recur (apply-move board move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
+         (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
+         (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
        ))))
 
 (defn play-game [board f1 f2]

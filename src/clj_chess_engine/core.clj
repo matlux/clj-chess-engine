@@ -587,7 +587,7 @@
   (->> (one-color board white-turn?)
        board2xy-map-piece
        (mapcat
-        (fn [[pos-xy c]]
+        (fn [[pos-xy _]]
           (let [pos (coord2pos pos-xy)]
             (map
              (fn [move] [pos move])

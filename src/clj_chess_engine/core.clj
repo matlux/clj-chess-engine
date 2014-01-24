@@ -183,6 +183,7 @@
 ;; ------------- all possible moves
 
 (defn is-white? [^Character piece]
+  {:pre [(display-assert (char? piece) piece)]}
   (Character/isUpperCase piece))
 (defn is-black? [^Character piece]
   (Character/isLowerCase piece))
@@ -763,6 +764,10 @@
   (if white-turn? [0 1] [1 0]))
 (def opposite-color-wins forfeit)
 
+(defn execute [f game-context]
+  (try (f game-context )
+       (catch Throwable t (do (println "caught exception inside chess player function" t) nil))))
+
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
   (if (check-mate? board white-turn? false move-history)
@@ -771,8 +776,8 @@
         [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) false move-history)
          [[move new-state] castled?] (if white-turn?
-                                       [(f1 board white-turn? white-castled? in-check? move-history state-f1) white-castled?]
-                                       [(f2 board white-turn? black-castled? in-check? move-history state-f2) black-castled?])
+                                       [(execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1}) white-castled?]
+                                       [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
             valid? (is-move-valid? board white-turn? false move-history move)
             en-passant-move (move-en-passant board white-turn? false move-history move)
             real-move (if en-passant-move en-passant-move move)
@@ -799,10 +804,10 @@
   (map (fn [[i e]] e) (filter (fn [[i e]] (zero? (mod i n))) (map-indexed (fn [i e] [i e]) coll))))
 
 (defn- create-fn [moves]
-  (fn [board am-i-white? have-i-castled? in-check? last-move option-state]
-      (let [move-seq (if (nil? option-state)
+  (fn [{b :board c :white-turn ic :in-check? h :history s :state}]
+      (let [move-seq (if (nil? s)
                        moves
-                       option-state)]
+                       s)]
         [(first move-seq) (next move-seq)])))
 
 (defn create-fns-from-scenario [moves]
@@ -823,7 +828,7 @@
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move
 
-(defn interactive-f [board am-i-white? have-i-castled? in-check? move-history option-state]
+(defn interactive-f [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
   (do
     (display-board board)
     (println (if am-i-white? "white: " "black: "))

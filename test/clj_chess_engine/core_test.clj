@@ -447,3 +447,51 @@
            \P \P \P \P \- \P \P \P
            \R \N \B \Q \K \B \N \R]
           :invalid-move]))))
+
+(defn invalid-move-f [game-context]
+  nil)
+(defn garbage-f [game-context]
+  (-1))
+(defn exception-f [game-context]
+  (throw (Exception. "this is an exception")))
+
+
+
+(deftest function-raises-exception
+  (testing ""
+    (is (= (play-game (initial-board) exception-f exception-f)
+           [[0 1] [nil]
+            [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R]
+            :invalid-move]))))
+(deftest function-garbage-move
+  (testing ""
+    (is (= (play-game (initial-board) garbage-f garbage-f)
+           [[0 1] [nil]
+            [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+(deftest function-nil-move
+  (testing ""
+    (is (= (play-game (initial-board) invalid-move-f invalid-move-f)
+           [[0 1] [nil]
+               [\r \n \b \q \k \b \n \r
+                \p \p \p \p \p \p \p \p
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \P \P \P \P \P \P \P \P
+                \R \N \B \Q \K \B \N \R] :invalid-move]))))

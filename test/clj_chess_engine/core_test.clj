@@ -411,7 +411,7 @@
           :invalid-move]))))
 
 (deftest en-passant-case-game
-  (testing "black cannot move it's pawn on f7 because it will get into check mate. However it decides to make an invalid move [f7 f6] anyway."
+  (testing ""
     (is (=
          (play-scenario  [["e2" "e4"] ["d7" "d5"]
                           ["e4" "d5"] ["e7" "e5"]
@@ -422,6 +422,25 @@
           [\r \n \b \q \k \b \n \r
            \p \p \p \- \- \p \p \p
            \- \- \- \- \P \- \- \-
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \- \- \- \-
+           \P \P \P \P \- \P \P \P
+           \R \N \B \Q \K \B \N \R]
+          :invalid-move]))))
+
+(deftest en-passant-case-game2
+  (testing ""
+    (is (=
+         (play-scenario  [["e2" "e4"] ["d7" "d5"]
+                          ["e4" "d5"] ["c7" "c5"]
+                          ["d5" "c6"] ["d5" "c6"]])
+         [[1 0] [["e2" "e4"] ["d7" "d5"]
+                 ["e4" "d5"] ["c7" "c5"]
+                 ["d5" "c6"] ["d5" "c6"]]
+          [\r \n \b \q \k \b \n \r
+           \p \p \- \- \p \p \p \p
+           \- \- \P \- \- \- \- \-
            \- \- \- \- \- \- \- \-
            \- \- \- \- \- \- \- \-
            \- \- \- \- \- \- \- \-

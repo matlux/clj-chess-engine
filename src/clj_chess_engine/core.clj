@@ -759,12 +759,6 @@
 ;(check-mate? (in-check-test) false false [])
 
 
-
-
-(defn apply-move-safe  [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
-  (if (is-move-valid? board white-turn? castle? move) history (apply-move (initial-board) move)))
-
-
 (defn forfeit [white-turn?]
   (if white-turn? [0 1] [1 0]))
 (def opposite-color-wins forfeit)

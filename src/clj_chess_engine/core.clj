@@ -2,7 +2,10 @@
   (:require [clojure.math.numeric-tower :as math])
   (:import clojure.lang.PersistentVector))
 
+(defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
+(defmacro display-assert [x & args] `(let [x# ~x] (if x# true (do (println '~x "is wrong because =" x# "and [" '~@args "] = [" ~@args "]") false))))
 
+(macroexpand '(display-assert (+ x 1) x))
 
 (defn initial-board []
   [\r \n \b \q \k \b \n \r
@@ -90,9 +93,11 @@
 
 
 (defn file-component [file]
+  {:post [(and (< % 8) (>= % 0))]}
   (- (int file) (int *file-key*)))
 
 (defn rank-component [rank]
+  {:post [(and (< % 64) (>= % 0))]}
   (->> (int *rank-key*)
        (- (int rank))
        (- 8)
@@ -128,26 +133,45 @@
 
 ;(rank-coord \1)
 (defn pos2coord [^String pos]
+  {:pre [(display-assert (and (string? pos) (= (count pos) 2)) pos)]}
   (let [[file rank] pos
         x (file2coord file)
         y (rank2coord rank)]
     [x y]))
 
 (defn coord2pos [[x y]]
+  {:pre [(display-assert (and (number? x)(number? y)))]}
   (let [
         file (coord2file x)
         rank (coord2rank y)]
     (str file rank)))
 
+(defn move-xy2move [move-xy] (let [[from to] move-xy] [(coord2pos from) (coord2pos to)]))
+(defn move2move-xy [move] (let [[from to] move] [(pos2coord from) (pos2coord to)]))
+(defn move-xy2move-vec [coll] (map (fn [[from to]] [(coord2pos from) (coord2pos to)]) coll))
+(defn move2move-xy-vec [coll] {:pre [(display-assert (and (vector? coll) (string? (ffirst coll))) coll)]} (into [] (map (fn [[from to]] [(pos2coord from) (pos2coord to)]) coll)))
+
 ;(coord2pos [4 6])
 
+
+(move2move-xy ["e5" "e6"])
+
 (defn- index [file rank]
+  {:pre [(and (char? file) (char? rank))]}
   (+ (file-component file) (rank-component rank)))
 
+(defn- index-xy [x y]
+  (+ x (* y 8)))
+
+;;(index \a \1)
+;;(index-xy 7 7)
+
 (defn lookup [^PersistentVector board ^String pos]
+  {:pre [(string? pos)]}
   (let [[file rank] pos]
     (board (index file rank))))
 (defn lookup-xy [^PersistentVector board ^PersistentVector pos]
+  {:pre [(and (vector? pos) (number? (first pos)))]}
   (lookup board (coord2pos pos)))
 
 ;; (file-component \b)
@@ -289,18 +313,19 @@
 
 ;;(collid? (initial-board) [1 6])
 
-(defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
 
 ;;---- pawn moves
 
 (defn- en-passant? [board white? last-move diag x y]
+  {:pre [(display-assert (or (and (vector? last-move) (number? (ffirst last-move))) (nil? last-move)) last-move)]}
   (when (not (nil? last-move))
     (let [[op opposite-start-rank] (if white? [+ 1] [- 6])
          [from to] last-move
-         pawn? (is-pawn? (lookup board to))
+         pawn? (is-pawn? (lookup-xy board to))
          [dx dy] diag
-         [fx fy] (pos2coord from)
-         [tx ty] (pos2coord to)]
+         [fx fy] from
+         [tx ty] to
+         ]
      [fx fy tx ty pawn?]
      (and pawn?
           (= fx tx dx)
@@ -320,6 +345,7 @@
 ;; => true
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [4 2] 3 3)
 ;; => false
+
 ;;(en-passant? (en-passant-check-test) white nil [4 2] 3 3)
 ;; => false
 
@@ -348,7 +374,7 @@
                       (= y start-rank)) front2)
 
                )
-        foobar (dbg (map meta moves))]
+        ]
     (filter (comp not nil?) moves)))
 
 ;;(not (= (lookup-xy (initial-board) [2 1]) \-))
@@ -356,6 +382,7 @@
 ;;(map coord2pos (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
 ;;(map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
 ;;  (map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["e7" "e5"] 3 3))
+;;(->> (pawn-moves (en-passant-check-test) white ["e7" "e5"] 3 3) first meta)
 
 
 
@@ -371,8 +398,10 @@
           last-move (last history)
           moves (pawn-moves board white? last-move x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+      (filter no-self-collision? (filter valid-move? moves)))))
 
+
+;;(->> (Pawn. (en-passant-check-test) "d5" white [[(pos2coord "e7") (pos2coord "e5")]]) getMoves first meta)
 
 ;;(getMoves (Pawn. (test-board2) "b3" false))
 ;; => ("c2" "a2" "b2")
@@ -382,7 +411,7 @@
 ;; =>("b5" "a5")
 ;;(getMoves (Pawn. (test-board2) "a6" false))
 ;; =>("b5" "a5")
-(getMoves (Pawn. (en-passant-check-test) "d5" true [["c7" "c5"]]))
+(getMoves (Pawn. (en-passant-check-test) "d5" true (move2move-xy-vec [["c7" "c5"]])))
 ;; =>("c6" "d6")
 
 ;;---- King moves
@@ -415,7 +444,7 @@
     (let [[x y] (pos2coord pos)
           moves (king-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+      (filter no-self-collision? (filter valid-move? moves)))))
 
 
 (getMoves (King. (test-board2) "d3" true))
@@ -451,7 +480,7 @@
     (let [[x y] (pos2coord pos)
           moves (queen-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+      (filter no-self-collision? (filter valid-move? moves)))))
 
 (getMoves (Queen. (test-board2) "d3" true))
 (getMoves (Queen. (could-become-in-check-test) "h5" true))
@@ -478,7 +507,7 @@
     (let [[x y] (pos2coord pos)
           moves (rook-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+      (filter no-self-collision? (filter valid-move? moves)))))
 
 
 (getMoves (Rook. (test-board2) "c2" true))
@@ -511,7 +540,7 @@
     (let [[x y] (pos2coord pos)
           moves (bishop-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? moves))))))
+      (filter no-self-collision? (filter valid-move? moves)))))
 
 
 (getMoves (Bishop. (initial-board) "a3" true))
@@ -547,7 +576,7 @@
     (let [[x y] (pos2coord pos)
           kmoves (knight-moves x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (map coord2pos (filter no-self-collision? (filter valid-move? kmoves))))))
+      (filter no-self-collision? (filter valid-move? kmoves)))))
 
 ;;(getMoves (Knight. (initial-board) "g1" true))
 ;; f3 g3
@@ -565,9 +594,10 @@
 
 (one-color (initial-board) false)
 
-(defn convert2obj [^PersistentVector board history ^String pos]
-  (let [piece (lookup board pos)
-        color (is-white? piece)]
+(defn convert2obj [^PersistentVector board history pos-xy]
+  (let [piece (lookup-xy board pos-xy)
+        color (is-white? piece)
+        pos (coord2pos pos-xy)]
     (cond
      (is-knight? piece) (Knight. board pos color)
      (is-bishop? piece) (Bishop. board pos color)
@@ -576,16 +606,17 @@
      (is-rook? piece) (Rook. board pos color)
      (is-pawn? piece) (Pawn. board pos color history))))
 
-;;(convert2obj (initial-board) "h1" [])
+;;(convert2obj (initial-board) [] (pos2coord "h1"))
 
 ;;---- move validation
 
 
 
-(defn possible-moves [^PersistentVector board history ^String pos]
-  (getMoves (convert2obj board history pos)))
+(defn possible-moves [^PersistentVector board history pos-xy]
+  (getMoves (convert2obj board history pos-xy)))
 ;; => #{"e4" "e3"}
-(possible-moves (initial-board) [] "a2")
+;;(possible-moves (initial-board) [] (pos2coord "a2"))
+;;(map meta (possible-moves (en-passant-check-test) [[[2 1] [2 3]]] (pos2coord "d5")))
 
 ;; (defn all-possible-moves [board white-turn? castle?]
 ;;   (->> (one-color board white-turn?) board2xy-map-piece (map (fn [[pos-xy c]] (coord2pos pos-xy)))))
@@ -597,8 +628,10 @@
         (fn [[pos-xy _]]
           (let [pos (coord2pos pos-xy)]
             (map
-             (fn [move] [pos move])
-             (possible-moves board history pos)))))))
+             (fn [move] [pos-xy move])
+             (possible-moves board history pos-xy)))))))
+
+;;(map (fn [[a b]] [(meta a) (meta b)]) (all-possible-moves (en-passant-check-test) true false [[[2 1] [2 3]]]))
 
 ;;(filter #(is-piece? %))
 ;;(map (fn [[pos c]] (possible-moves board pos)))
@@ -607,9 +640,10 @@
 
 (defn king-pos [board king-white?]
   (let [king (if king-white? \K \k)]
-    (->> ((->>  (group-by #(second %) (board2xy-map-piece board)) (into {})) king) ffirst coord2pos)))
+    (->> ((->>  (group-by #(second %) (board2xy-map-piece board)) (into {})) king) ffirst)))
 
 (king-pos (check-mate-test) false)
+;; => [4 0]
 
 (defn check? [board white-king? castled? history]
   (let [opposite-moves (all-possible-moves board (not white-king?) castled? history)
@@ -653,12 +687,12 @@
 
 ;;----- change state of board (make moves)
 
-(defn apply-move [^PersistentVector board ^PersistentVector move]
+(defn apply-move [^PersistentVector board ^PersistentVector move] ;; xy
   (let [[from to] move
-        taken (:taken (meta move))
-        piece (lookup board from)
-        new-board (-> (assoc board (apply index from) \-)
-                      (assoc (apply index to) piece))]
+        taken (:taken (meta to))
+        piece (lookup-xy board from)
+        new-board (-> (assoc board (apply index-xy from) \-)
+                      (assoc (apply index-xy to) piece))]
     (if taken
       (assoc new-board (apply index (coord2pos taken)) \-)
       new-board)))
@@ -666,36 +700,47 @@
 ;;(apply index "b2")
 
 
+;;(display-board (apply-move (initial-board) [(pos2coord "b2") (pos2coord "b4")]))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 ;;(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
+;;(display-board (apply-move (en-passant-check-test) (with-meta [(pos2coord "d5") (pos2coord "c6")] {:en-passant true, :taken [2 3]})))
 
 (defn all-possible-moves-with-in-check [board white-turn? castle? history]
-  (let [possible-moves (all-possible-moves board white-turn? castle? history)
+  (let [possible-moves-xy (all-possible-moves board white-turn? castle? history)
         f (fn [move] (let [possible-new-board (apply-move board move)]
                       (not (check? possible-new-board white-turn? castle? history))))]
-    (filter f possible-moves)))
+    (filter f possible-moves-xy)))
 
-;(all-possible-moves-with-in-check (check-mate-test) false false)
-;(all-possible-moves-with-in-check (in-check-test) false false)
+
+
+;;(map (fn [[a b]] [(meta a) (meta b)]) (all-possible-moves-with-in-check (en-passant-check-test) true false [[[2 1] [2 3]]]))
+
+;;(all-possible-moves-with-in-check (check-mate-test) false false [])
+;;(all-possible-moves-with-in-check (in-check-test) false false [])
+;; => ([[4 1] [3 2]])
 ;(filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check (could-become-in-check-test) false false))
 
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
+  {:pre [(display-assert (and (vector? history) (or (nil? (first history)) (number? (first (ffirst history))))) history)]}
   (let [;in-check? (check? board (not white-turn?) false)
         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
     (not (not (some #(= move %) moves)))))
 
+
 (defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
   (let [;in-check? (check? board (not white-turn?) false)
         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
-    (first (filter #(and (= move %)
-                         (:en-passant (meta %)))
+    (first (filter #(let [[from to] %] (and (= move %)
+                          (:en-passant (meta to))))
                    moves))))
 
-;;(is-move-valid? (en-passant-check-test) white false [["c7" "c5"]] ["d5" "c6"])
-;;(all-possible-moves-with-in-check (en-passant-check-test) white false [["c7" "c5"]] )
+;;(is-move-valid? (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
+;;(move-en-passant (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
+
+;;(all-possible-moves-with-in-check (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) )
 ;;(is-move-valid? (en-passant-check-test) true false [] ["d5" "c4"])
 ;; => true
 ;;(is-move-valid? (initial-board) true false [] ["b2" "b3"])
@@ -735,11 +780,12 @@
                                        [(f1 board white-turn? white-castled? in-check? move-history state-f1) white-castled?]
                                        [(f2 board white-turn? black-castled? in-check? move-history state-f2) black-castled?])
             valid? (is-move-valid? board white-turn? false move-history move)
-            en-passant-move (move-en-passant move)
+            en-passant-move (move-en-passant board white-turn? false move-history move)
             real-move (if en-passant-move en-passant-move move)
          new-history (conj move-history move)
          cmate (check-mate? board white-turn? false move-history)]
-     ;(display-board board)
+                                        ;(display-board board)
+        ;(println "real-move meta=" (meta (second real-move)))
      (if (not valid?)
        [(forfeit white-turn?) new-history board :invalid-move]
        (if white-turn?
@@ -773,9 +819,12 @@
 
 
 
-(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
-   (play-game (initial-board) f1 f2)))
-;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]])
+(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario (move2move-xy-vec scenario))]
+                                 (let [[score moves board reason] (play-game (initial-board) f1 f2)]
+                                   [score (move-xy2move-vec moves) board reason])))
+
+
+;;(play-scenario  (move2move-xy-vec [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 ;; => check-mate
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move
@@ -792,6 +841,20 @@
 
 ;; (play-game (initial-board) interactive-f interactive-f)
 
+;; first move is special
+
+;; what should be passed:
+;; board state
+
+;; pass a map with all the data
+;; {:board :last-move :color :white :avaliable-moves {} }
+
+;; [[:a1 :a3] state]
+;; set of avaliable moves
+
+;; returns move + state
+
+;; move is source location, destination
 
 
 (defn f1 [board am-i-white? have-i-castled? in-check? move-history option-state]
@@ -814,3 +877,8 @@
 
 
 ;; (filter (fn [[from _]] (= from "d5")) (all-possible-moves-with-in-check (en-passant-check-test) white false []))
+
+
+(play-scenario   [["e2" "e4"] ["d7" "d5"]
+                  ["e4" "d5"] ["e7" "e5"]
+                  ["d5" "e6"] ["d5" "e6"]])

@@ -239,17 +239,18 @@
 
 (deftest test-all-possible-move-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (all-possible-moves (initial-board) white false [])
+    (is (= (move-xy2move-vec (all-possible-moves (initial-board) white false []))
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 
 (deftest test-all-possible-move-with-in-check-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (all-possible-moves-with-in-check (initial-board) white false [])
+    (is (= (move-xy2move-vec (all-possible-moves-with-in-check (initial-board) white false []))
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 (deftest test-all-possible-move-with-in-check1
   (testing "black turn, only one move is allowed"
-    (is (= (all-possible-moves-with-in-check in-check-board black false [])
+    (is (= (move-xy2move-vec (all-possible-moves-with-in-check in-check-board black false []))
            '(["e7" "d6"])))))
+
 (deftest test-all-possible-move-with-in-check2
   (testing "black's turn, shouldn't be able to move pawn on f7 because it would put itself into check"
     (is (= (filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check could-become-in-check-board black false []))
@@ -261,19 +262,19 @@
 
 (deftest test-all-possible-move-with-in-check-enpassant
   (testing ""
-    (is (true? (some (fn [move] (= move ["d5" "c6"])) (all-possible-moves-with-in-check en-passant-check-board white false [["c7" "c5"]]))))))
+    (is (true? (some (fn [move] (= move [(pos2coord "d5") (pos2coord "c6")])) (all-possible-moves-with-in-check en-passant-check-board white false (move2move-xy-vec [["c7" "c5"]])))))))
 
 (deftest test-enpassant-valid
   (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false [["c7" "c5"]] ["d5" "c6"])
-         true)))
+    (is (is-move-valid? en-passant-check-board white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
+        true)))
 (deftest test-enpassant-valid2
   (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false [["d4" "d5"]["e7" "e5"]] ["d5" "e6"])
-         true)))
+    (is (is-move-valid? en-passant-check-board white false (move2move-xy-vec [["d4" "d5"]["e7" "e5"]]) (move2move-xy ["d5" "e6"]))
+        true)))
 (deftest test-none-enpassant-diagonal-valid3
   (testing "test diagonal move validity with pawn"
-    (is (is-move-valid? en-passant-check-board2 white false [["d4" "d5"] ["c7" "c6"]] ["d5" "c6"])
+    (is (is-move-valid? en-passant-check-board2 white false (move2move-xy-vec [["d4" "d5"] ["c7" "c6"]]) (move2move-xy ["d5" "c6"]))
          true)))
 
 
@@ -324,6 +325,8 @@
            \P \P \P \P \- \P \P \P
            \R \N \B \- \K \- \N \R]
           :check-mate]))))
+
+
 
 (deftest an-invalid-move-from-white-game
   (testing "invalid move from white."
@@ -392,11 +395,11 @@
   (testing "black cannot move it's pawn on f7 because it will get into check mate. However it decides to make an invalid move [f7 f6] anyway."
     (is (=
          (play-scenario  [["e2" "e4"] ["e7" "e5"]
-                          ["d1" "h5"] ["f7" "f6"]
-                          ["f1" "c4"] ["b8" "c6"]
-                          ["h5" "f7"] ["e8" "e7"]])
+                           ["d1" "h5"] ["f7" "f6"]
+                           ["f1" "c4"] ["b8" "c6"]
+                           ["h5" "f7"] ["e8" "e7"]])
          [[1 0] [["e2" "e4"] ["e7" "e5"]
-                 ["d1" "h5"] ["f7" "f6"]]
+                  ["d1" "h5"] ["f7" "f6"]]
           [\r \n \b \q \k \b \n \r
            \p \p \p \p \- \p \p \p
            \- \- \- \- \- \- \- \-
@@ -412,7 +415,7 @@
     (is (=
          (play-scenario  [["e2" "e4"] ["d7" "d5"]
                           ["e4" "d5"] ["e7" "e5"]
-                          ["d5" "e6"] ["d5" "e6"] nil])
+                          ["d5" "e6"] ["d5" "e6"]])
          [[1 0] [["e2" "e4"] ["d7" "d5"]
                  ["e4" "d5"] ["e7" "e5"]
                  ["d5" "e6"] ["d5" "e6"]]

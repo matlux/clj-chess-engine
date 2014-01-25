@@ -93,7 +93,7 @@
 
 
 (defn file-component [file]
-  {:post [(and (< % 8) (>= % 0))]}
+  ;{:post [(and (< % 8) (>= % 0))]}
   (- (int file) (int *file-key*)))
 
 (defn rank-component [rank]
@@ -104,13 +104,13 @@
        (* 8)))
 
 (defn- file2coord [file]
-  {:post [(and (< % 8) (>= % 0))]}
+  ;{:post [(and (< % 8) (>= % 0))]}
   (file-component file))
 
 ;(file-coord \a)
 
 (defn- rank2coord [rank]
-  {:post [(and (< % 8) (>= % 0))]}
+  ;{:post [(and (< % 8) (>= % 0))]}
   (->> (int *rank-key*)
        (- (int rank))
        (- 8)))
@@ -223,6 +223,21 @@
        (< y 8)
        (>= y 0)
        ))
+
+;; (defn pos2coord [^String pos]
+;;   {:pre [(display-assert (and (string? pos) (= (count pos) 2)) pos)]}
+;;   )
+
+(defn- pos-within-board? [^String pos]
+  (pos-xy-within-board?
+   (let [[file rank] pos
+         x (file2coord file)
+         y (rank2coord rank)]
+     [x y])))
+
+(pos-within-board? "e8")
+(pos-within-board? "e9")
+(pos-within-board? "q8")
 
 (defn collid-self? [board white-turn? coord]
   (if white-turn?
@@ -413,7 +428,7 @@
 ;; =>("b5" "a5")
 ;;(getMoves (Pawn. (test-board2) "a6" false))
 ;; =>("b5" "a5")
-(getMoves (Pawn. (en-passant-check-test) "d5" true  [["c7" "c5"]]))
+;;(getMoves (Pawn. (en-passant-check-test) "d5" true  [["c7" "c5"]]))
 ;; =>("c6" "d6")
 
 ;;---- King moves
@@ -781,10 +796,14 @@
 
 (defn execute [f game-context]
   (try (f game-context )
-       (catch Throwable t (do (println "caught exception inside chess player function" t) nil))))
+       (catch Throwable t (do (println "caught exception inside chess player function" t) [:caught-exception t]))))
 
 (defn parse-f-return [ret]
-  (if (or (vector? (first ret)) (nil? ret))
+  (if  (or
+        (and (vector? ret)
+             (or (vector? (first ret))
+                 (= (first ret) :caught-exception)))
+        (nil? ret) )
     ret
     [ret nil]))
 
@@ -798,21 +817,22 @@
             [f-return castled?] (if white-turn?
                                           [(execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1}) white-castled?]
                                           [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
-            [move new-state] (parse-f-return f-return)
-            valid? (is-move-valid? board white-turn? false move-history move)
-            norm-move (normalize move)
-            new-history (conj move-history norm-move)
-         ]
-     (if (not valid?)
-       [(forfeit white-turn?) new-history board :invalid-move]
-       (let [
-             move-xy (move2move-xy  norm-move)
-             en-passant-move (move-en-passant board white-turn? false move-history move-xy)
-             real-move (if en-passant-move en-passant-move move-xy)]
-         (if white-turn?
-          (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
-          (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history state-f1 new-state)))
-       ))))
+            [move new-state] (parse-f-return f-return)]
+        (if (= move :caught-exception)
+          [(forfeit white-turn?) (conj move-history new-state ) board :caught-exception]
+          (let [valid? (is-move-valid? board white-turn? false move-history move)
+                norm-move (normalize move)
+                new-history (conj move-history norm-move)]
+            (if (not valid?)
+             [(forfeit white-turn?) new-history board :invalid-move]
+             (let [
+                   move-xy (move2move-xy  norm-move)
+                   en-passant-move (move-en-passant board white-turn? false move-history move-xy)
+                   real-move (if en-passant-move en-passant-move move-xy)]
+               (if white-turn?
+                 (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
+                 (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history state-f1 new-state)))
+             ))))))
 
 (defn play-game [board f1 f2]
   (play-game-rec board f1 f2 true false false [] nil nil)

@@ -4,7 +4,7 @@ A Clojure application designed to play chess and get functions to compete agains
 
 ## Usage
 
-### Play against a dumb algorithm
+### Play interactively against a random algorithm
 
 * clone the repo
 * lein repl
@@ -13,7 +13,7 @@ A Clojure application designed to play chess and get functions to compete agains
 Enter your moves as follow in the stdin:
     [:e2 :e4]
 
-### Play two ramdom algorithms against one another
+### Play two random algorithms against one another
 
     (play-game (initial-board) random-f random-f)
 

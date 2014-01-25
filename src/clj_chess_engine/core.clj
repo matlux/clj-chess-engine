@@ -760,9 +760,10 @@
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) move-history)
+            valid-moves (all-possible-moves-with-in-check board white-turn? move-history)
             f-return (if white-turn?
-                       (execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1})
-                       (execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}))
+                       (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
+                       (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
             [move new-state] (parse-f-return f-return)]
         (if (= move :caught-exception)
           [(forfeit white-turn?) (conj move-history new-state ) board :caught-exception]

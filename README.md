@@ -21,7 +21,7 @@ Sit back and enjoy the game. Watch out the CPU is going to get hot and the funct
 
 ## License
 
-Copyright © 2014 FIXME
+Copyright © 2014 Matlux
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.

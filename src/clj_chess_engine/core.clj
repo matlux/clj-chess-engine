@@ -217,7 +217,7 @@
 
 ;;(pos2coord "e5")
 
-(defn- valid-move-xy? [[x y]]
+(defn- pos-xy-within-board? [[x y]]
   (and (< x 8)
        (>= x 0)
        (< y 8)
@@ -359,12 +359,12 @@
         front [x (op y 1)]
         front2 [x (op y 2)]
         moves (vector
-               (when (and (valid-move-xy? right-diag)
+               (when (and (pos-xy-within-board? right-diag)
                           (or
                            (collid-oposite? board white? right-diag)
                            (en-passant? board white? last-move right-diag x y)))
                  (with-meta right-diag {:en-passant true :taken [(+ x 1) y]} ))
-               (when (and (valid-move-xy? left-diag)
+               (when (and (pos-xy-within-board? left-diag)
                           (or
                            (collid-oposite? board white? left-diag)
                            (en-passant? board white? last-move left-diag x y)))
@@ -400,7 +400,7 @@
           last-move (last history)
           moves (pawn-moves board white? last-move x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? moves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
 
 ;;(->> (Pawn. (en-passant-check-test) "d5" white [[(pos2coord "e7") (pos2coord "e5")]]) getMoves first meta)
@@ -432,7 +432,7 @@
                         )
                    (and (= a 0) (not (= b 0)))
                    (and (= b 0) (not (= a 0))))
-               (valid-move-xy? [(+ a x) (+ b y)])
+               (pos-xy-within-board? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
                )] [(+ a x) (+ b y)]))
@@ -446,7 +446,7 @@
     (let [[x y] (pos2coord pos)
           moves (king-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? moves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
 
 (getMoves (King. (test-board2) "d3" true))
@@ -468,7 +468,7 @@
                         )
                    (and (= a 0) (not (= b 0)))
                    (and (= b 0) (not (= a 0))))
-               (valid-move-xy? [(+ a x) (+ b y)])
+               (pos-xy-within-board? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
                )] [(+ a x) (+ b y)]))
@@ -482,7 +482,7 @@
     (let [[x y] (pos2coord pos)
           moves (queen-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? moves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
 (getMoves (Queen. (test-board2) "d3" true))
 (getMoves (Queen. (could-become-in-check-test) "h5" true))
@@ -495,7 +495,7 @@
         b (range -7 8)
         :when (and
                (or (and (= a 0) (not (= b 0))) (and (= b 0) (not (= a 0))))
-               (valid-move-xy? [(+ a x) (+ b y)])
+               (pos-xy-within-board? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
                )] [(+ a x) (+ b y)]))
@@ -509,14 +509,14 @@
     (let [[x y] (pos2coord pos)
           moves (rook-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? moves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
 
 (getMoves (Rook. (test-board2) "c2" true))
 (pos2coord "a1")
 (rook-moves (test-board2) 0 7)
 (nothing-between (test-board2) [1 7] [0 7])
-(valid-move-xy? [1 7])
+(pos-xy-within-board? [1 7])
 
 ;;---- bishop
 
@@ -528,7 +528,7 @@
                (or (= (+ a b) 0) (= (- a b) 0))
                (not (= a 0))
                (not (= b 0))
-               (valid-move-xy? [(+ a x) (+ b y)])
+               (pos-xy-within-board? [(+ a x) (+ b y)])
                ;(not (collid-self? board true [x y]))
                (nothing-between board [(+ a x) (+ b y)] [x y])
                )] [(+ a x) (+ b y)]))
@@ -542,7 +542,7 @@
     (let [[x y] (pos2coord pos)
           moves (bishop-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? moves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
 
 (getMoves (Bishop. (initial-board) "a3" true))
@@ -578,7 +578,7 @@
     (let [[x y] (pos2coord pos)
           kmoves (knight-moves x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter valid-move-xy? kmoves)))))
+      (filter no-self-collision? (filter pos-xy-within-board? kmoves)))))
 
 ;;(getMoves (Knight. (initial-board) "g1" true))
 ;; f3 g3

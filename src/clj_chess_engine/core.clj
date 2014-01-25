@@ -139,6 +139,7 @@
         y (rank2coord rank)]
     [x y]))
 
+
 (defn coord2pos [[x y]]
   {:pre [(display-assert (and (number? x)(number? y)))]}
   (let [
@@ -147,7 +148,7 @@
     (str file rank)))
 
 (defn move-xy2move [move-xy] (let [[from to] move-xy] [(coord2pos from) (coord2pos to)]))
-(defn move2move-xy [move] (let [[from to] move] [(pos2coord from) (pos2coord to)]))
+(defn move2move-xy [move] (if (nil? move) nil (let [[from to] move] [(pos2coord from) (pos2coord to)])))
 (defn move-xy2move-vec [coll] (map (fn [[from to]] [(coord2pos from) (coord2pos to)]) coll))
 (defn move2move-xy-vec [coll] {:pre [(display-assert (and (vector? coll) (string? (ffirst coll))) coll)]} (into [] (map (fn [[from to]] [(pos2coord from) (pos2coord to)]) coll)))
 
@@ -171,7 +172,7 @@
   (let [[file rank] pos]
     (board (index file rank))))
 (defn lookup-xy [^PersistentVector board ^PersistentVector pos]
-  {:pre [(and (vector? pos) (number? (first pos)))]}
+  {:pre [(display-assert (and (vector? pos) (number? (first pos))) pos)]}
   (lookup board (coord2pos pos)))
 
 ;; (file-component \b)
@@ -318,10 +319,10 @@
 ;;---- pawn moves
 
 (defn- en-passant? [board white? last-move diag x y]
-  {:pre [(display-assert (or (and (vector? last-move) (number? (ffirst last-move))) (nil? last-move)) last-move)]}
+  {:pre [(display-assert (or (and (vector? last-move) (string? (first last-move))) (nil? last-move)) last-move)]}
   (when (not (nil? last-move))
     (let [[op opposite-start-rank] (if white? [+ 1] [- 6])
-         [from to] last-move
+         [from to] (move2move-xy last-move)
          pawn? (is-pawn? (lookup-xy board to))
          [dx dy] diag
          [fx fy] from
@@ -412,7 +413,7 @@
 ;; =>("b5" "a5")
 ;;(getMoves (Pawn. (test-board2) "a6" false))
 ;; =>("b5" "a5")
-(getMoves (Pawn. (en-passant-check-test) "d5" true (move2move-xy-vec [["c7" "c5"]])))
+(getMoves (Pawn. (en-passant-check-test) "d5" true  [["c7" "c5"]]))
 ;; =>("c6" "d6")
 
 ;;---- King moves
@@ -725,10 +726,12 @@
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
-  {:pre [(display-assert (and (vector? history) (or (nil? (first history)) (number? (first (ffirst history))))) history)]}
-  (let [;in-check? (check? board (not white-turn?) false)
-        moves (all-possible-moves-with-in-check board white-turn? castle? history)]
-    (not (not (some #(= move %) moves)))))
+  {:pre [(display-assert (and (vector? history) (or (nil? (first history)) (string?  (ffirst history)))) history)]}
+  (if (and (vector? move) (string? (first move)) (= (count (first move)) 2))
+   (let [              ;in-check? (check? board (not white-turn?) false)
+         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
+     (not (not (some #(= (move2move-xy move) %) moves))))
+   (do (println "move" move "is not formated correctly")  false)))
 
 
 (defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
@@ -775,12 +778,13 @@
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) false move-history)
-         [[move new-state] castled?] (if white-turn?
-                                       [(execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1}) white-castled?]
-                                       [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
+            [[move new-state] castled?] (if white-turn?
+                                          [(execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1}) white-castled?]
+                                          [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
             valid? (is-move-valid? board white-turn? false move-history move)
-            en-passant-move (move-en-passant board white-turn? false move-history move)
-            real-move (if en-passant-move en-passant-move move)
+            move-xy (move2move-xy move)
+            en-passant-move (move-en-passant board white-turn? false move-history move-xy)
+            real-move (if en-passant-move en-passant-move move-xy)
          new-history (conj move-history move)
          cmate (check-mate? board white-turn? false move-history)]
                                         ;(display-board board)
@@ -818,9 +822,9 @@
 
 
 
-(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario (move2move-xy-vec scenario))]
+(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
                                  (let [[score moves board reason] (play-game (initial-board) f1 f2)]
-                                   [score (move-xy2move-vec moves) board reason])))
+                                   [score moves board reason])))
 
 
 ;;(play-scenario  (move2move-xy-vec [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
@@ -878,6 +882,6 @@
 ;; (filter (fn [[from _]] (= from "d5")) (all-possible-moves-with-in-check (en-passant-check-test) white false []))
 
 
-(play-scenario   [["e2" "e4"] ["d7" "d5"]
-                  ["e4" "d5"] ["e7" "e5"]
-                  ["d5" "e6"] ["d5" "e6"]])
+;; (play-scenario   [["e2" "e4"] ["d7" "d5"]
+;;                   ["e4" "d5"] ["e7" "e5"]
+;;                   ["d5" "e6"] ["d5" "e6"]])

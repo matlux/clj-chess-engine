@@ -262,19 +262,19 @@
 
 (deftest test-all-possible-move-with-in-check-enpassant
   (testing ""
-    (is (true? (some (fn [move] (= move [(pos2coord "d5") (pos2coord "c6")])) (all-possible-moves-with-in-check en-passant-check-board white false (move2move-xy-vec [["c7" "c5"]])))))))
+    (is (true? (some (fn [move] (= move [(pos2coord "d5") (pos2coord "c6")])) (all-possible-moves-with-in-check en-passant-check-board white false  [["c7" "c5"]]))))))
 
 (deftest test-enpassant-valid
   (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
+    (is (is-move-valid? en-passant-check-board white false [["c7" "c5"]]  ["d5" "c6"])
         true)))
 (deftest test-enpassant-valid2
   (testing "test en-passant move validity"
-    (is (is-move-valid? en-passant-check-board white false (move2move-xy-vec [["d4" "d5"]["e7" "e5"]]) (move2move-xy ["d5" "e6"]))
+    (is (is-move-valid? en-passant-check-board white false [["d4" "d5"]["e7" "e5"]] ["d5" "e6"])
         true)))
 (deftest test-none-enpassant-diagonal-valid3
   (testing "test diagonal move validity with pawn"
-    (is (is-move-valid? en-passant-check-board2 white false (move2move-xy-vec [["d4" "d5"] ["c7" "c6"]]) (move2move-xy ["d5" "c6"]))
+    (is (is-move-valid? en-passant-check-board2 white false [["d4" "d5"] ["c7" "c6"]] ["d5" "c6"])
          true)))
 
 

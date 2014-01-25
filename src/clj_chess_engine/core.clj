@@ -325,9 +325,6 @@
 ;; ((fn [pieces-list]
 ;;    (into {} (filter #(not= \- (second %)) (map #(vector (c1dto2d %1) %2 ) (range 64) pieces-list)))) (initial-board))
 
-
-
-
 ;;(collid? (initial-board) [1 6])
 
 
@@ -400,10 +397,6 @@
 ;;(map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["c7" "c5"] 3 3))
 ;;  (map (fn [a] (meta a)) (pawn-moves (en-passant-check-test) white ["e7" "e5"] 3 3))
 ;;(->> (pawn-moves (en-passant-check-test) white ["e7" "e5"] 3 3) first meta)
-
-
-
-
 
 ;;(count (pawn-moves (initial-board) white [] 2 2))
 ;(nothing-between (initial-board) )
@@ -499,8 +492,8 @@
           no-self-collision? (comp not (partial collid-self? board white?))]
       (filter no-self-collision? (filter pos-xy-within-board? moves)))))
 
-(getMoves (Queen. (test-board2) "d3" true))
-(getMoves (Queen. (could-become-in-check-test) "h5" true))
+;;(getMoves (Queen. (test-board2) "d3" true))
+;;(getMoves (Queen. (could-become-in-check-test) "h5" true))
 ;;=> ("a3" "b3" "c4" "c3" "d7" "d6" "d5" "d4" "d2" "e4" "e3" "e2" "f5" "f3" "g6" "g3" "h7" "h3")
 
 ;;---- Rook
@@ -528,10 +521,6 @@
 
 
 (getMoves (Rook. (test-board2) "c2" true))
-(pos2coord "a1")
-(rook-moves (test-board2) 0 7)
-(nothing-between (test-board2) [1 7] [0 7])
-(pos-xy-within-board? [1 7])
 
 ;;---- bishop
 
@@ -570,8 +559,6 @@
 ;;("d3" "f3" "g4" "h5")
 
 
-
-
 ;; ---- knight stuff
 (defn- knight-moves [x y]
   #{[(+ x 2) (+ y 1)]
@@ -585,8 +572,6 @@
 
 ;;(knight-moves 0 0)
 
-
-
 (defrecord Knight [^PersistentVector board ^String pos ^boolean white?]
   Piece
   (getMoves [this]
@@ -597,13 +582,6 @@
 
 ;;(getMoves (Knight. (initial-board) "g1" true))
 ;; f3 g3
-;;(pos2coord "g1")
-
-;;(source comp)
-
-
-
-
 
 (defn- one-color [^PersistentVector board ^Boolean white?]
   (let [color? (if white? is-white? is-black?)]
@@ -698,14 +676,7 @@
       (assoc new-board (apply index-xy taken) \-)
       new-board)))
 
-;;(apply index "b2")
-
-
-;;(display-board (apply-move (initial-board) [(pos2coord "b2") (pos2coord "b4")]))
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
-;;(display-board (-> (apply-move (initial-board) ["b2" "b3"]) (apply-move ["b1" "c3"]) (apply-move ["e2" "e4"])))
-;;(display-board (apply-move (initial-board) ["b2" "b3"]))
-;;(display-board (apply-move (en-passant-check-test) (with-meta [(pos2coord "d5") (pos2coord "c6")] {:en-passant true, :taken [2 3]})))
 
 (defn all-possible-moves-with-in-check [board white-turn? history]
   (let [possible-moves-xy (all-possible-moves board white-turn? history)
@@ -757,15 +728,7 @@
 ;;(all-possible-moves-with-in-check (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) )
 ;;(is-move-valid? (en-passant-check-test) true false [] ["d5" "c4"])
 ;; => true
-;;(is-move-valid? (initial-board) true false [] ["b2" "b3"])
-;; => true
-;;(is-move-valid? (initial-board) true false [] nil)
-;; => false
-;;(is-move-valid? (bug-test) false false [] ["b8" "a6"])
-;;(check? (bug-test) true false)
-;; (defmacro --> [m firstkey & keys]
-;;   (let [a (map #(list 'get %) keys)]
-;;     `(-> (~m ~firstkey) ~@a)))
+
 
 (defn check-mate? [^PersistentVector board ^Boolean white-turn? ^PersistentVector history]
   (->> (all-possible-moves-with-in-check board white-turn? history) count zero?))

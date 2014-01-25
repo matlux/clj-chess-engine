@@ -448,6 +448,49 @@
            \R \N \B \Q \K \B \N \R]
           :invalid-move]))))
 
+(deftest en-passant-case-game3
+  (testing ""
+    (is (=
+         (play-scenario  [["e2" "e4"] ["f7" "f5"]
+                          ["g2" "g4"] ["f5" "f4"]
+                          ["b1" "a3"] ["f4" "e3"]])
+         [[1 0] [["e2" "e4"] ["f7" "f5"]
+                 ["g2" "g4"] ["f5" "f4"]
+                 ["b1" "a3"] ["f4" "e3"]]
+          [\r \n \b \q \k \b \n \r
+           \p \p \p \p \p \- \p \p
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \P \p \P \-
+           \N \- \- \- \- \- \- \-
+           \P \P \P \P \- \P \- \P
+           \R \- \B \Q \K \B \N \R]
+
+          :invalid-move]))))
+
+(deftest en-passant-case-game4
+  (testing ""
+    (is (=
+         (play-scenario  [["e2" "e4"] ["f7" "f5"]
+                          ["b1" "a3"] ["f5" "f4"]
+                          ["g2" "g4"] ["f4" "g3"]
+                          nil])
+         [[0 1] [["e2" "e4"] ["f7" "f5"]
+                 ["b1" "a3"] ["f5" "f4"]
+                 ["g2" "g4"] ["f4" "g3"]
+                 [nil nil]]
+          [\r \n \b \q \k \b \n \r
+           \p \p \p \p \p \- \p \p
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \- \- \- \-
+           \- \- \- \- \P \- \- \-
+           \N \- \- \- \- \- \p \-
+           \P \P \P \P \- \P \- \P
+           \R \- \B \Q \K \B \N \R]
+
+          :invalid-move]))))
+
+
 (defn invalid-move-f [game-context]
   nil)
 (defn garbage-f [game-context]
@@ -483,6 +526,23 @@
              \P \P \P \P \P \P \P \P
              \R \N \B \Q \K \B \N \R] :invalid-move]))))
 
+
+(defn garbage-f2 [game-context]
+  -1)
+(deftest function-garbage-move2
+  (testing ""
+    (is (= (play-game (initial-board) garbage-f garbage-f)
+           [[0 1] [nil]
+            [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+
 (deftest function-nil-move
   (testing ""
     (is (= (play-game (initial-board) invalid-move-f invalid-move-f)
@@ -494,4 +554,30 @@
                 \- \- \- \- \- \- \- \-
                 \- \- \- \- \- \- \- \-
                 \P \P \P \P \P \P \P \P
+                \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+(deftest function-nil-move2
+  (testing ""
+    (is (= (play-game (initial-board) (fn [_] [["e2" "e4"] nil]) invalid-move-f)
+           [[1 0] [["e2" "e4"] nil]
+               [\r \n \b \q \k \b \n \r
+                \p \p \p \p \p \p \p \p
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \P \- \- \-
+                \- \- \- \- \- \- \- \-
+                \P \P \P \P \- \P \P \P
+                \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+(deftest function-nil-move3
+  (testing ""
+    (is (= (play-game (initial-board) (fn [_] ["e2" "e4"]) invalid-move-f)
+           [[1 0] [["e2" "e4"] nil]
+               [\r \n \b \q \k \b \n \r
+                \p \p \p \p \p \p \p \p
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \P \- \- \-
+                \- \- \- \- \- \- \- \-
+                \P \P \P \P \- \P \P \P
                 \R \N \B \Q \K \B \N \R] :invalid-move]))))

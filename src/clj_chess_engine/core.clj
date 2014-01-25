@@ -731,7 +731,7 @@
    (let [              ;in-check? (check? board (not white-turn?) false)
          moves (all-possible-moves-with-in-check board white-turn? castle? history)]
      (not (not (some #(= (move2move-xy move) %) moves))))
-   (do (println "move" move "is not formated correctly")  false)))
+   (do (println "move" move "is not formatted correctly")  false)))
 
 
 (defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
@@ -771,6 +771,11 @@
   (try (f game-context )
        (catch Throwable t (do (println "caught exception inside chess player function" t) nil))))
 
+(defn parse-f-return [ret]
+  (if (or (vector? (first ret)) (nil? ret))
+    ret
+    [ret nil]))
+
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [board f1 f2 white-turn? white-castled? black-castled? move-history state-f1 state-f2]
   (if (check-mate? board white-turn? false move-history)
@@ -778,22 +783,22 @@
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) false move-history)
-            [[move new-state] castled?] (if white-turn?
+            [f-return castled?] (if white-turn?
                                           [(execute f1 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f1}) white-castled?]
                                           [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
+            [move new-state] (parse-f-return f-return)
             valid? (is-move-valid? board white-turn? false move-history move)
-            move-xy (move2move-xy move)
-            en-passant-move (move-en-passant board white-turn? false move-history move-xy)
-            real-move (if en-passant-move en-passant-move move-xy)
-         new-history (conj move-history move)
-         cmate (check-mate? board white-turn? false move-history)]
-                                        ;(display-board board)
-        ;(println "real-move meta=" (meta (second real-move)))
+            new-history (conj move-history move)
+         ]
      (if (not valid?)
        [(forfeit white-turn?) new-history board :invalid-move]
-       (if white-turn?
-         (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
-         (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history state-f1 new-state))
+       (let [
+             move-xy (move2move-xy  move)
+             en-passant-move (move-en-passant board white-turn? false move-history move-xy)
+             real-move (if en-passant-move en-passant-move move-xy)]
+         (if white-turn?
+          (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history new-state state-f2)
+          (recur (apply-move board real-move) f1 f2 (not white-turn?) false false new-history state-f1 new-state)))
        ))))
 
 (defn play-game [board f1 f2]

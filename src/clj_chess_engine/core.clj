@@ -97,7 +97,7 @@
   (- (int file) (int *file-key*)))
 
 (defn rank-component [rank]
-  {:post [(and (< % 64) (>= % 0))]}
+  {:post [(display-assert (and (< % 64) (>= % 0)) rank)]}
   (->> (int *rank-key*)
        (- (int rank))
        (- 8)
@@ -381,8 +381,11 @@
                            (collid-oposite? board white? left-diag)
                            (en-passant? board white? last-move left-diag x y)))
                  (with-meta left-diag {:en-passant true :taken [(- x 1) y]} ) )
-               (when (not (collid? board front)) front)
                (when (and
+                      (pos-xy-within-board? front)
+                      (not (collid? board front))) front)
+               (when (and
+                      (pos-xy-within-board? front2)
                       (not (collid? board front))
                       (not (collid? board front2))
                       (= y start-rank)) front2)
@@ -760,7 +763,7 @@
         (println "check-mate!")
         [(opposite-color-wins white-turn?) move-history board :check-mate])
       (let [in-check? (check? board (not white-turn?) move-history)
-            valid-moves (all-possible-moves-with-in-check board white-turn? move-history)
+            valid-moves (move-xy2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
@@ -817,10 +820,11 @@
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move
 
-(defn interactive-f [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
+(defn interactive-f [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state}]
   (do
     (display-board board)
     (println (if am-i-white? "white: " "black: "))
+    (println "valid moves:" valid-moves)
     (let [move (read-string (read-line))]
 
      move)))
@@ -845,28 +849,28 @@
 ;; move is source location, destination
 
 
-(defn f1 [board am-i-white? have-i-castled? in-check? move-history option-state]
-                            (let [move-seq (if (nil? option-state)
+(defn f1 [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
+                            (let [move-seq (if (nil? s)
                                              (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-                                             option-state)]
+                                             s)]
                               [(first move-seq) (next move-seq)]))
 
-(defn f2 [board am-i-white? have-i-castled? in-check? last-move option-state]
+(defn f2 [{board :board am-i-white? :white-turn ic :in-check? h :history option-state :state}]
   (let [b board
         move-seq (if (nil? option-state)
            (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
            option-state)]
     [(first move-seq) (next move-seq)]))
 
-;;study this case cause it's bugged
- ;; (let [[score move-history last-board invalid-move?] (play-game (initial-board) f1 f2)]
- ;;   (display-board last-board))
-;; => [move option-state]
+(defn random-f [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state}]
+  (let [v (into [] valid-moves)]
+    (display-board board)
+    (println (if am-i-white? "white: " "black: "))
+    (println "valid moves:" valid-moves)
+    (get v (rand-int (count valid-moves)))) )
 
 
-;; (filter (fn [[from _]] (= from "d5")) (all-possible-moves-with-in-check (en-passant-check-test) white false []))
-
-
-;; (play-scenario   [["e2" "e4"] ["d7" "d5"]
-;;                   ["e4" "d5"] ["e7" "e5"]
-;;                   ["d5" "e6"] ["d5" "e6"]])
+;; (play-game (initial-board) interactive-f f2)
+;; (play-game (initial-board) interactive-f random-f)
+;;(rand-int 42)
+;; (play-game (initial-board) random-f random-f)

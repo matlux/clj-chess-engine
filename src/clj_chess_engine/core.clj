@@ -723,15 +723,24 @@
 ;; => ([[4 1] [3 2]])
 ;(filter (fn [[from to]] (= from "f7")) (all-possible-moves-with-in-check (could-become-in-check-test) false false))
 
+
+(defn- normalize [move]
+  (if (and (vector? move)
+           (keyword? (first move))
+           (keyword? (second move)))
+    (let [[f t] move]
+      [(name f) (name t)])
+    move))
+
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
   {:pre [(display-assert (and (vector? history) (or (nil? (first history)) (string?  (ffirst history)))) history)]}
-  (if (and (vector? move) (string? (first move)) (= (count (first move)) 2))
-   (let [              ;in-check? (check? board (not white-turn?) false)
-         moves (all-possible-moves-with-in-check board white-turn? castle? history)]
-     (not (not (some #(= (move2move-xy move) %) moves))))
-   (do (println "move" move "is not formatted correctly")  false)))
+  (let [norm-move (normalize move)]
+    (if (and (vector? norm-move) (string? (first norm-move)) (= (count (first norm-move)) 2))
+     (let [moves (all-possible-moves-with-in-check board white-turn? castle? history)]
+       (not (not (some #(= (move2move-xy norm-move) %) moves))))
+     (do (println "move" move "is not formatted correctly")  false))))
 
 
 (defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
@@ -788,12 +797,13 @@
                                           [(execute f2 {:board board :white-turn white-turn? :in-check? in-check? :history move-history :state state-f2}) black-castled?])
             [move new-state] (parse-f-return f-return)
             valid? (is-move-valid? board white-turn? false move-history move)
-            new-history (conj move-history move)
+            norm-move (normalize move)
+            new-history (conj move-history norm-move)
          ]
      (if (not valid?)
        [(forfeit white-turn?) new-history board :invalid-move]
        (let [
-             move-xy (move2move-xy  move)
+             move-xy (move2move-xy  norm-move)
              en-passant-move (move-en-passant board white-turn? false move-history move-xy)
              real-move (if en-passant-move en-passant-move move-xy)]
          (if white-turn?

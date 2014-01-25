@@ -625,3 +625,16 @@
                 \- \- \- \- \- \- \- \-
                 \P \P \P \P \- \P \P \P
                 \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+(deftest keyword_move
+  (testing ""
+    (is (= (play-game (initial-board) (fn [_] [:e2 :e4]) invalid-move-f)
+           [[1 0] [["e2" "e4"] nil]
+               [\r \n \b \q \k \b \n \r
+                \p \p \p \p \p \p \p \p
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \- \- \- \-
+                \- \- \- \- \P \- \- \-
+                \- \- \- \- \- \- \- \-
+                \P \P \P \P \- \P \P \P
+                \R \N \B \Q \K \B \N \R] :invalid-move]))))

@@ -770,20 +770,21 @@
     {:move ret}))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2}]
+(defn play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2 iteration :iteration}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
         {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate})
-      (let [in-check? (check? board (not white-turn?) move-history)
+      (let [new-iteration (if (nil? iteration) 1 (inc iteration))
+            in-check? (check? board (not white-turn?) move-history)
             valid-moves (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
             {move :move new-state :state exception :exception} (parse-f-return f-return)]
-        (if (= move :caught-exception)
-          {:score (forfeit white-turn?) :history (conj move-history exception ) :board board :result :caught-exception}
-          (let [valid? (is-move-valid? board white-turn? move-history move)
+        (cond (> new-iteration 500)         {:score [1/2 1/2] :history (conj move-history new-iteration) :board board :result :draw-by-number-of-iteration}
+              (= move :caught-exception) {:score (forfeit white-turn?) :history (conj move-history exception ) :board board :result :caught-exception}
+              :else (let [valid? (is-move-valid? board white-turn? move-history move)
                 norm-move (normalize move)
                 new-history (conj move-history norm-move)]
             (if (not valid?)
@@ -793,8 +794,8 @@
                    en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
                    real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
                (if white-turn?
-                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 new-state :state-f2 state-f2})
-                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state})))
+                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 new-state :state-f2 state-f2 :iteration new-iteration})
+                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state :iteration new-iteration})))
              ))))))
 
 (defn play-game [board f1 f2]
@@ -883,12 +884,24 @@
     (println "valid moves:" valid-moves)
     (println "iteration:" iteration)
     (let [move (rand-int (count valid-moves))]
-      (println "choosen move:" move)
+      (println "choosen move:" (get v move))
       {:move (get v move) :state iteration})) )
 
 
 ;; (play-game (initial-board) interactive-f f2)
 ;; (play-game (initial-board) interactive-f random-f)
 ;;(rand-int 42)
-;; (let [result (play-game (initial-board) random-f random-f)]
-;;   (println result))
+
+
+(def database (atom {
+                     :contenders [{:login "Philip" :functions [{:id "daredevil" :function random-f :past-battles [{:against "superman" :scores []}]}]}
+                                  {:login "Nicholas" :functions [{:id "superman" :function random-f :past-battles [{:against "daredevil" }]}]}]}))
+
+(defn tournement []
+ (let [result (play-game (initial-board) random-f random-f)]
+   (println result)
+   (recur)))
+
+
+(defn -main []
+ (tournement))

@@ -757,7 +757,7 @@
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
-        [(opposite-color-wins white-turn?) move-history board :check-mate])
+        {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate})
       (let [in-check? (check? board (not white-turn?) move-history)
             valid-moves (move-xy2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
             f-return (if white-turn?
@@ -765,12 +765,12 @@
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
             {move :move new-state :state exception :exception} (parse-f-return f-return)]
         (if (= move :caught-exception)
-          [(forfeit white-turn?) (conj move-history exception ) board :caught-exception]
+          {:score (forfeit white-turn?) :history (conj move-history exception ) :board board :result :caught-exception}
           (let [valid? (is-move-valid? board white-turn? move-history move)
                 norm-move (normalize move)
                 new-history (conj move-history norm-move)]
             (if (not valid?)
-             [(forfeit white-turn?) new-history board :invalid-move]
+              {:score (forfeit white-turn?) :history new-history :board board :result :invalid-move}
              (let [
                    move-xy (move2move-xy  norm-move)
                    en-passant-move (move-en-passant board white-turn? false move-history move-xy)
@@ -807,8 +807,8 @@
 
 
 (defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
-                                 (let [[score moves board reason] (play-game (initial-board) f1 f2)]
-                                   [score moves board reason])))
+                                 (let [result (play-game (initial-board) f1 f2)]
+                                   result)))
 
 
 ;;(play-scenario  (move2move-xy-vec [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
@@ -859,14 +859,19 @@
     [(first move-seq) (next move-seq)]))
 
 (defn random-f [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state}]
-  (let [v (into [] valid-moves)]
+  (let [v (into [] valid-moves)
+        iteration (if (nil? s) (+ 1 (if am-i-white? 0 1)) (+ 2 s))]
     (display-board board)
     (println (if am-i-white? "white: " "black: "))
     (println "valid moves:" valid-moves)
-    (get v (rand-int (count valid-moves)))) )
+    (println "iteration:" iteration)
+    (let [move (rand-int (count valid-moves))]
+      (println "choosen move:" move)
+      {:move (get v move) :state iteration})) )
 
 
 ;; (play-game (initial-board) interactive-f f2)
 ;; (play-game (initial-board) interactive-f random-f)
 ;;(rand-int 42)
-;; (play-game (initial-board) random-f random-f)
+;; (let [result (play-game (initial-board) random-f random-f)]
+;;   (println result))

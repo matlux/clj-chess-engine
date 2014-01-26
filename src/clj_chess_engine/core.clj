@@ -757,7 +757,7 @@
     [ret nil]))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn- play-game-rec [board f1 f2 white-turn? move-history state-f1 state-f2]
+(defn- play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
@@ -780,12 +780,12 @@
                    en-passant-move (move-en-passant board white-turn? false move-history move-xy)
                    real-move (if en-passant-move en-passant-move move-xy)]
                (if white-turn?
-                 (recur (apply-move board real-move) f1 f2 (not white-turn?) new-history new-state state-f2)
-                 (recur (apply-move board real-move) f1 f2 (not white-turn?) new-history state-f1 new-state)))
+                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 new-state :state-f2 state-f2})
+                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state})))
              ))))))
 
 (defn play-game [board f1 f2]
-  (play-game-rec board f1 f2 true [] nil nil)
+  (play-game-rec {:board board :f1 f1 :f2 f2 :white-turn? true :move-history []})
   )
 ;; => [score move-history last-board invalid-move? check-mate?]
 ;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]

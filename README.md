@@ -7,8 +7,14 @@ A Clojure application designed to play chess and get functions to compete agains
 ### Play interactively against a random algorithm
 
 * clone the repo
-* lein repl
-* (play-game (initial-board) interactive-f random-f)
+* start repl
+
+    lein repl
+
+* enter the following commands
+
+    (use 'clj-chess-engine.core)
+    (play-game (initial-board) interactive-f random-f)
 
 Enter your moves as follow in the stdin:
     [:e2 :e4]

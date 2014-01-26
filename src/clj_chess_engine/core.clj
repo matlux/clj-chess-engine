@@ -147,10 +147,15 @@
         rank (coord2rank y)]
     (str file rank)))
 
+(defn movemap2move [[from {to :move-to}]]
+  [from to])
+
 (defn move-xy2move [move-xy] (let [[from to] move-xy] [(coord2pos from) (coord2pos to)]))
 (defn move2move-xy [move] (if (nil? move) nil (let [[from to] move] [(pos2coord from) (pos2coord to)])))
 (defn move-xy2move-vec [coll] (map (fn [[from to]] [(coord2pos from) (coord2pos to)]) coll))
 (defn move2move-xy-vec [coll] {:pre [(display-assert (and (vector? coll) (string? (ffirst coll))) coll)]} (into [] (map (fn [[from to]] [(pos2coord from) (pos2coord to)]) coll)))
+
+(defn move-xymap2move-vec [coll] (move-xy2move-vec (map movemap2move coll)))
 
 ;(coord2pos [4 6])
 
@@ -341,10 +346,12 @@
          [tx ty] to
          ]
      [fx fy tx ty pawn?]
-     (and pawn?
-          (= fx tx dx)
-          (= fy opposite-start-rank)
-          (= ty (op fy 2) (op dy 1))))))
+     (let [ep (and pawn?
+                 (= fx tx dx)
+                 (= fy opposite-start-rank)
+                 (= ty (op fy 2) (op dy 1)))]
+       (when ep (do (println "possible en-passant move" x y ", last-move" last-move ",board" board)))
+       ep))))
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 2] 3 3)
 ;; => true
 ;;(en-passant? (en-passant-check-test) white ["c7" "c6"] [2 2] 3 3)
@@ -372,23 +379,27 @@
         front2 [x (op y 2)]
         moves (vector
                (when (and (pos-xy-within-board? right-diag)
-                          (or
-                           (collid-oposite? board white? right-diag)
-                           (en-passant? board white? last-move right-diag x y)))
-                 (with-meta right-diag {:en-passant true :taken [(+ x 1) y]} ))
+                          (collid-oposite? board white? right-diag))
+                 {:move-to right-diag} )
+               (when (and (pos-xy-within-board? right-diag)
+                          (en-passant? board white? last-move right-diag x y))
+                 {:move-to right-diag :en-passant true :taken [(+ x 1) y] :last-move last-move :board board} )
                (when (and (pos-xy-within-board? left-diag)
-                          (or
-                           (collid-oposite? board white? left-diag)
-                           (en-passant? board white? last-move left-diag x y)))
-                 (with-meta left-diag {:en-passant true :taken [(- x 1) y]} ) )
+                          (collid-oposite? board white? left-diag))
+                 {:move-to left-diag}  )
+               (when (and (pos-xy-within-board? left-diag)
+                          (en-passant? board white? last-move left-diag x y))
+                 {:move-to left-diag :en-passant true :taken [(- x 1) y] :last-move last-move :board board}  )
                (when (and
                       (pos-xy-within-board? front)
-                      (not (collid? board front))) front)
+                      (not (collid? board front)))
+                 {:move-to front})
                (when (and
                       (pos-xy-within-board? front2)
                       (not (collid? board front))
                       (not (collid? board front2))
-                      (= y start-rank)) front2)
+                      (= y start-rank))
+                 {:move-to front2})
 
                )
         ]
@@ -411,7 +422,7 @@
           last-move (last history)
           moves (pawn-moves board white? last-move x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
+      (filter #(no-self-collision? (:move-to %)) (filter #(pos-xy-within-board? (:move-to %)) moves)))))
 
 
 ;;(->> (Pawn. (en-passant-check-test) "d5" white [[(pos2coord "e7") (pos2coord "e5")]]) getMoves first meta)
@@ -426,6 +437,9 @@
 ;; =>("b5" "a5")
 ;;(getMoves (Pawn. (en-passant-check-test) "d5" true  [["c7" "c5"]]))
 ;; =>("c6" "d6")
+
+(defn map-move-to2map [moves]
+  (map (fn [move] {:move-to move}) moves))
 
 ;;---- King moves
 
@@ -457,7 +471,7 @@
     (let [[x y] (pos2coord pos)
           moves (king-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
+      (map-move-to2map (filter no-self-collision? (filter pos-xy-within-board? moves))))))
 
 
 (getMoves (King. (test-board2) "d3" true))
@@ -493,7 +507,7 @@
     (let [[x y] (pos2coord pos)
           moves (queen-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
+      (map-move-to2map (filter no-self-collision? (filter pos-xy-within-board? moves))))))
 
 ;;(getMoves (Queen. (test-board2) "d3" true))
 ;;(getMoves (Queen. (could-become-in-check-test) "h5" true))
@@ -520,7 +534,7 @@
     (let [[x y] (pos2coord pos)
           moves (rook-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
+      (map-move-to2map (filter no-self-collision? (filter pos-xy-within-board? moves))))))
 
 
 (getMoves (Rook. (test-board2) "c2" true))
@@ -549,7 +563,7 @@
     (let [[x y] (pos2coord pos)
           moves (bishop-moves board x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? moves)))))
+      (map-move-to2map (filter no-self-collision? (filter pos-xy-within-board? moves))))))
 
 
 (getMoves (Bishop. (initial-board) "a3" true))
@@ -581,7 +595,7 @@
     (let [[x y] (pos2coord pos)
           kmoves (knight-moves x y)
           no-self-collision? (comp not (partial collid-self? board white?))]
-      (filter no-self-collision? (filter pos-xy-within-board? kmoves)))))
+      (map-move-to2map (filter no-self-collision? (filter pos-xy-within-board? kmoves))))))
 
 ;;(getMoves (Knight. (initial-board) "g1" true))
 ;; f3 g3
@@ -635,9 +649,9 @@
 ;; => [4 0]
 
 (defn check? [board white-king? history]
-  (let [opposite-moves (all-possible-moves board (not white-king?) history)
+  (let [opposite-moves-xy2map (all-possible-moves board (not white-king?) history)
         king (king-pos board white-king?)]
-    (not (not (some #(= % king) (map #(second %) opposite-moves))))))
+    (not (not (some #(= % king) (map #(:move-to (second %)) opposite-moves-xy2map))))))
 
 ;;(check? (check-mate-test) false false [])
 ;;(check? (initial-board) false false [])
@@ -669,23 +683,26 @@
 
 ;;----- change state of board (make moves)
 
-(defn apply-move [^PersistentVector board ^PersistentVector move] ;; xy
+(defn apply-move [^PersistentVector board ^PersistentVector move] ;; xy or xymap
   (let [[from to] move
-        taken (:taken (meta to))
+        en-passant (:en-passant to)
+        taken (:taken to)
+        b (:board to)
+        real-to (if en-passant (:move-to to) to)
         piece (lookup-xy board from)
         new-board (-> (assoc board (apply index-xy from) \-)
-                      (assoc (apply index-xy to) piece))]
-    (if taken
-      (assoc new-board (apply index-xy taken) \-)
+                      (assoc (apply index-xy real-to) piece))]
+    (if en-passant
+      (do (println "applying en-passant move" move ", taken" taken) (assoc new-board (apply index-xy taken) \-))
       new-board)))
 
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
 
 (defn all-possible-moves-with-in-check [board white-turn? history]
-  (let [possible-moves-xy (all-possible-moves board white-turn? history)
-        f (fn [move] (let [possible-new-board (apply-move board move)]
+  (let [possible-moves-xy2map (all-possible-moves board white-turn? history)
+        f (fn [[from {to :move-to}]] (let [possible-new-board (apply-move board [from to])]
                       (not (check? possible-new-board white-turn? history))))]
-    (filter f possible-moves-xy)))
+    (filter f possible-moves-xy2map)))
 
 
 
@@ -705,6 +722,7 @@
       [(name f) (name t)])
     move))
 
+
 ;; todo: catch any exception
 ;; todo: check that any none valid input returns nil
 (defn is-move-valid? [^PersistentVector board ^Boolean white-turn? ^PersistentVector history ^PersistentVector move]
@@ -714,16 +732,16 @@
          (vector? norm-move)
          (string? (first norm-move))
          (= (count (first norm-move)) 2))
-     (let [moves (all-possible-moves-with-in-check board white-turn? history)]
-       (not (not (some #(= (move2move-xy norm-move) %) moves))))
-     (do (println "move" move "is not formatted correctly")  false))))
+      (let [moves-xy2map (all-possible-moves-with-in-check board white-turn? history)]
+        (not (not (some #(= (move2move-xy norm-move) (movemap2move %)) moves-xy2map))))
+      (do (println "move" move "is not formatted correctly")  false))))
 
 
 (defn move-en-passant [^PersistentVector board ^Boolean white-turn? ^Boolean castle? ^PersistentVector history ^PersistentVector move]
-  (let [moves (all-possible-moves-with-in-check board white-turn? history)]
-    (first (filter #(let [[from to] %] (and (= move %)
-                          (:en-passant (meta to))))
-                   moves))))
+  (let [moves-xy-map (all-possible-moves-with-in-check board white-turn? history)]
+    (first (filter #(let [[from {to :move-to :as tomap}] %] (and (= move [from to])
+                          (:en-passant tomap)))
+                   moves-xy-map))))
 
 ;;(is-move-valid? (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
 ;;(move-en-passant (en-passant-check-test) white false (move2move-xy-vec [["c7" "c5"]]) (move2move-xy ["d5" "c6"]))
@@ -759,7 +777,7 @@
         (println "check-mate!")
         {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate})
       (let [in-check? (check? board (not white-turn?) move-history)
-            valid-moves (move-xy2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
+            valid-moves (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
@@ -773,8 +791,8 @@
               {:score (forfeit white-turn?) :history new-history :board board :result :invalid-move}
              (let [
                    move-xy (move2move-xy  norm-move)
-                   en-passant-move (move-en-passant board white-turn? false move-history move-xy)
-                   real-move (if en-passant-move en-passant-move move-xy)]
+                   en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
+                   real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
                (if white-turn?
                  (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 new-state :state-f2 state-f2})
                  (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state})))

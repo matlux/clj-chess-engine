@@ -239,16 +239,16 @@
 
 (deftest test-all-possible-move-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (move-xy2move-vec (all-possible-moves (initial-board) white []))
+    (is (= (move-xymap2move-vec (all-possible-moves (initial-board) white []))
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 
 (deftest test-all-possible-move-with-in-check-init
   (testing "that all the 20 possibilities (8 pawn x2 moves + 2 knights x2 moves) are found for the first move"
-    (is (= (move-xy2move-vec (all-possible-moves-with-in-check (initial-board) white []))
+    (is (= (move-xymap2move-vec (all-possible-moves-with-in-check (initial-board) white []))
            '(["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "h3"] ["e2" "e3"] ["e2" "e4"] ["d2" "d3"] ["d2" "d4"] ["c2" "c3"] ["c2" "c4"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"])))))
 (deftest test-all-possible-move-with-in-check1
   (testing "black turn, only one move is allowed"
-    (is (= (move-xy2move-vec (all-possible-moves-with-in-check in-check-board black []))
+    (is (= (move-xymap2move-vec (all-possible-moves-with-in-check in-check-board black []))
            '(["e7" "d6"])))))
 
 (deftest test-all-possible-move-with-in-check2
@@ -262,7 +262,7 @@
 
 (deftest test-all-possible-move-with-in-check-enpassant
   (testing ""
-    (is (true? (some (fn [move] (= move [(pos2coord "d5") (pos2coord "c6")])) (all-possible-moves-with-in-check en-passant-check-board white [["c7" "c5"]]))))))
+    (is (true? (some (fn [move] (= (movemap2move move) [(pos2coord "d5") (pos2coord "c6")])) (all-possible-moves-with-in-check en-passant-check-board white [["c7" "c5"]]))))))
 
 (deftest test-enpassant-valid
   (testing "test en-passant move validity"
@@ -778,3 +778,47 @@
              \P \P \P \P \P \P \P \P
              \R \N \B \Q \K \B \N \R]
             :result :invalid-move}))))
+
+(deftest en-passant-case-game3
+  (testing ""
+    (is (= (play-game (initial-board) (fn [_] [:w7]) invalid-move-f)
+           {:score [0 1]
+            :history [[:w7]]
+            :board [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R]
+            :result :invalid-move}))))
+
+
+(deftest en-passant-case-game7
+  (testing ""
+    (is (=
+         (play-scenario  [[:a2 :a3] [:f7 :f5] [:c2 :c4] [:e7 :e5] [:d1 :a4] [:d8 :f6] [:d2 :d3] [:f6 :h4] [:g2 :g4] [:b8 :c6] [:b2 :b4] [:g7 :g6] [:c1 :h6] [:f8 :h6] [:e2 :e3] [:h4 :h3] [:g4 :f5] [:h6 :g5] [:g1 :f3] [:g8 :e7] [:e1 :d2] [:h3 :h5] [:a4 :c2] [:e7 :d5] [:c4 :d5] [:g5 :f6] [:c2 :a4] [:e5 :e4] [:f3 :g5] [:f6 :b2] [:a4 :a5] [:b2 :c1] [:d2 :c1] [:h5 :e2] [:a5 :c7] [:e2 :g4] [:c7 :c6] [:g4 :h4] [:h1 :g1] [:h4 :f2] [:d3 :d4] [:f2 :g2] [:b4 :b5] [:b7 :c6] [:g5 :h7] [:e8 :e7] [:a3 :a4] [:g2 :g4] [:b1 :d2] [:c8 :a6] [:h2 :h4] [:a6 :b7] [:g1 :g4] [:e7 :d6] [:g4 :g2] [:a8 :d8] [:f1 :e2] nil ; [:c6 :d5]
+                          nil])
+         {:score [0 1], :history [["a2" "a3"] ["f7" "f5"] ["c2" "c4"] ["e7" "e5"] ["d1" "a4"] ["d8" "f6"] ["d2" "d3"] ["f6" "h4"] ["g2" "g4"] ["b8" "c6"] ["b2" "b4"] ["g7" "g6"] ["c1" "h6"] ["f8" "h6"] ["e2" "e3"] ["h4" "h3"] ["g4" "f5"] ["h6" "g5"] ["g1" "f3"] ["g8" "e7"] ["e1" "d2"] ["h3" "h5"] ["a4" "c2"] ["e7" "d5"] ["c4" "d5"] ["g5" "f6"] ["c2" "a4"] ["e5" "e4"] ["f3" "g5"] ["f6" "b2"] ["a4" "a5"] ["b2" "c1"] ["d2" "c1"] ["h5" "e2"] ["a5" "c7"] ["e2" "g4"] ["c7" "c6"] ["g4" "h4"] ["h1" "g1"] ["h4" "f2"] ["d3" "d4"] ["f2" "g2"] ["b4" "b5"] ["b7" "c6"] ["g5" "h7"] ["e8" "e7"] ["a3" "a4"] ["g2" "g4"] ["b1" "d2"] ["c8" "a6"] ["h2" "h4"] ["a6" "b7"] ["g1" "g4"] ["e7" "d6"] ["g4" "g2"] ["a8" "d8"] ["f1" "e2"] ["c6" "d5"] nil],
+          :board
+          [\- \- \- \r \- \- \- \r
+           \p \b \- \p \- \- \- \N
+           \- \- \- \k \- \- \p \-
+           \- \P \- \p \- \P \- \-
+           \P \- \- \P \p \- \- \P
+           \- \- \- \- \P \- \- \-
+           \- \- \- \N \B \- \R \-
+           \R \- \K \- \- \- \- \-], :result :invalid-move}))))
+
+
+;;[\- \- \- \r \- \- \- \r
+ ;; \p \b \- \p \- \- \- \N
+ ;; \- \- \p \k \- \- \p \-
+ ;; \- \P \- \P \- \P \- \-
+ ;; \P \- \- \P \p \- \- \P
+ ;; \- \- \- \- \P \- \- \-
+ ;; \- \- \- \N \B \- \R \-
+ ;; \R \- \K \- \- \- \- \-]
+
+;; {:score [1 0], :history [[a2 a3] [f7 f5] [c2 c4] [e7 e5] [d1 a4] [d8 f6] [d2 d3] [f6 h4] [g2 g4] [b8 c6] [b2 b4] [g7 g6] [c1 h6] [f8 h6] [e2 e3] [h4 h3] [g4 f5] [h6 g5] [g1 f3] [g8 e7] [e1 d2] [h3 h5] [a4 c2] [e7 d5] [c4 d5] [g5 f6] [c2 a4] [e5 e4] [f3 g5] [f6 b2] [a4 a5] [b2 c1] [d2 c1] [h5 e2] [a5 c7] [e2 g4] [c7 c6] [g4 h4] [h1 g1] [h4 f2] [d3 d4] [f2 g2] [b4 b5] [b7 c6] [g5 h7] [e8 e7] [a3 a4] [g2 g4] [b1 d2] [c8 a6] [h2 h4] [a6 b7] [g1 g4] [e7 d6] [g4 g2] [a8 d8] [f1 e2] [c6 d5] [c1 c2] [h8 g8] [g2 g5] [a7 a6] [a4 a5] [d8 e8] [b5 a6] [g8 h8] [c2 c3] [h8 f8] [g5 g6] [e8 e6] [d2 b3] [e6 e7] [g6 g7] [e7 g7] [a1 h1] [b7 c8] [h1 g1] [f8 f6] [g1 a1] [f6 a6] [e2 h5] [a6 a2] [c3 b4] [g7 g4] [b4 c3] [a2 c2] [c3 b4] [g4 g1] [a1 a3] [c2 f2] [f5 f6] [g1 c1] [b4 a5] [c8 b7] [h5 d1] [c1 c4] [b3 a1] [c4 c3] [a5 b5] [c3 c8] [f6 f7] [c8 e8] [a3 d3] [f2 f4] [b5 b6] [e8 c8] [a1 c2] [f4 f5] [b6 a7] [c8 g8] [c2 a3] [f5 f4] [d1 h5] [g8 g5] [a7 b6] [b7 c8] [b6 a5] [f4 f5] [f7 f8] [f5 f1] [a3 b1] [d7 d6] [h7 f6] [g5 e5] [h5 e2] [f1 f2] [f6 d7] [f2 h2] [e2 d1] [h2 f2] [b1 c3] [e5 f5] [d1 g4] [f2 a2] [a5 b5] [e4 d3] [d7 c5] [a2 b2] [c5 b3] [f5 f4] [e3 e4] [c8 g4] [b5 a4] [f4 f2] [e4 d5] [g4 e6] [b3 a1] [b2 b4] [a4 a5] [f2 h2] [c3 e4] [b4 e4] [a5 b6] [h2 d2] [b6 a5] [e4 b4] [h4 h5] [b4 g4] [a1 b3] [g4 g3] [b3 c5] [g3 g7] [a5 a6] [e6 c8] [a6 b5] [d6 c5] [b5 c4] [c8 g4] [c4 c3] [g7 a7] [h5 h6] [d2 d1] [h6 h7] [g4 c8] [c3 b2] [d1 b1] [b2 c3] [b1 b8] [c3 c4] [b8 b7] [h7 h8] [a7 a2] [c4 d3] [a2 b2] [d5 d6] [c5 c4] [d3 c3] [b7 e7] [c3 b2] [e7 e3] [b2 c1] [e3 e4] [d6 d7] [c8 d7] [c1 b2] [e4 e6] [b2 c1] [c4 c3] [c1 c2] [e6 h6] [c2 c1] [d7 b5] [c1 d1] [b5 f1] [d1 e1] [h6 f6] [e1 d1] [f6 d6] [d1 e1] [d6 d3] [e1 f1] [d3 d2] [f1 g1] [d2 h2] [g1 f1] [h2 h5] [f1 f2] [h5 d5] [f2 f1] [d5 d6] [f1 g2] [d6 a6] [g2 f3] [a6 a2] [f3 g3] [a2 a8] [g3 f3] [a8 a6] [f3 g4] [a6 e6] [g4 h3] [e6 h6] [h3 g4] [h6 h2] [g4 f3] [h2 a2] [f3 e3] [a2 c2] [e3 f3] [c2 c1] [f3 f2] [c1 c2] [f2 e1] [c2 f2] [e1 f2] [c3 c2] [f2 e3] [c2 c1] [e3 d2]], :board [- - - - - P - P - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - K - - - - - - p - - - - -], :result :check-mate}

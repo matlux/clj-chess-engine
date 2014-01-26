@@ -345,12 +345,11 @@
          [fx fy] from
          [tx ty] to
          ]
-     [fx fy tx ty pawn?]
      (let [ep (and pawn?
                  (= fx tx dx)
                  (= fy opposite-start-rank)
                  (= ty (op fy 2) (op dy 1)))]
-       (when ep (do (println "possible en-passant move" x y ", last-move" last-move ",board" board)))
+       ;(when ep (do (println "possible en-passant move" x y ", last-move" last-move ",board" board)))
        ep))))
 ;;(en-passant? (en-passant-check-test) white ["c7" "c5"] [2 2] 3 3)
 ;; => true
@@ -693,7 +692,7 @@
         new-board (-> (assoc board (apply index-xy from) \-)
                       (assoc (apply index-xy real-to) piece))]
     (if en-passant
-      (do (println "applying en-passant move" move ", taken" taken) (assoc new-board (apply index-xy taken) \-))
+      (assoc new-board (apply index-xy taken) \-)
       new-board)))
 
 ;;(display-board (apply-move (initial-board) ["b2" "b3"]))
@@ -771,7 +770,7 @@
     {:move ret}))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn- play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2}]
+(defn play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")

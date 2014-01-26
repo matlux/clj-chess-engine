@@ -745,16 +745,12 @@
 
 (defn execute [f game-context]
   (try (f game-context )
-       (catch Throwable t (do (println "caught exception inside chess player function" t) [:caught-exception t]))))
+       (catch Throwable t (do (println "caught exception inside chess player function" t) {:move :caught-exception :exception t}))))
 
 (defn parse-f-return [ret]
-  (if  (or
-        (and (vector? ret)
-             (or (vector? (first ret))
-                 (= (first ret) :caught-exception)))
-        (nil? ret) )
+  (if  (map? ret)
     ret
-    [ret nil]))
+    {:move ret}))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn- play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2}]
@@ -767,9 +763,9 @@
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
-            [move new-state] (parse-f-return f-return)]
+            {move :move new-state :state exception :exception} (parse-f-return f-return)]
         (if (= move :caught-exception)
-          [(forfeit white-turn?) (conj move-history new-state ) board :caught-exception]
+          [(forfeit white-turn?) (conj move-history exception ) board :caught-exception]
           (let [valid? (is-move-valid? board white-turn? move-history move)
                 norm-move (normalize move)
                 new-history (conj move-history norm-move)]
@@ -800,7 +796,7 @@
       (let [move-seq (if (nil? s)
                        moves
                        s)]
-        [(first move-seq) (next move-seq)])))
+        {:move (first move-seq) :state (next move-seq)})))
 
 (defn create-fns-from-scenario [moves]
   (let [white-moves (every-nth moves 2)

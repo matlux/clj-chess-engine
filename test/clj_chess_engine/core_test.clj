@@ -478,7 +478,7 @@
          [[0 1] [["e2" "e4"] ["f7" "f5"]
                  ["b1" "a3"] ["f5" "f4"]
                  ["g2" "g4"] ["f4" "g3"]
-                 [nil nil]]
+                 nil]
           [\r \n \b \q \k \b \n \r
            \p \p \p \p \p \- \p \p
            \- \- \- \- \- \- \- \-
@@ -522,7 +522,7 @@
          [[0 1] [["g2" "g4"] ["f7" "f5"]
                  ["b1" "a3"] ["f5" "f4"]
                  ["e2" "e4"] ["f4" "e3"]
-                 [nil nil]]
+                 nil]
           [\r \n \b \q \k \b \n \r
            \p \p \p \p \p \- \p \p
            \- \- \- \- \- \- \- \-
@@ -576,7 +576,7 @@
 
 (deftest function-garbage-move2
   (testing ""
-    (is (= (play-game (initial-board)  (fn [_] [["e9" "e4"] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] {:move ["e9" "e4"]}) garbage-f)
            [[0 1] [["e9" "e4"]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
@@ -589,7 +589,7 @@
 
 (deftest function-garbage-move3
   (testing "upper case move don't work"
-    (is (= (play-game (initial-board)  (fn [_] [["e8" "A4"] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] ["e8" "A4"]) garbage-f)
            [[0 1] [["e8" "A4"]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
@@ -602,7 +602,7 @@
 
 (deftest function-garbage-move4
   (testing ""
-    (is (= (play-game (initial-board)  (fn [_] [["ee8" "a4"] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] ["ee8" "a4"]) garbage-f)
            [[0 1] [["ee8" "a4"]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
@@ -615,7 +615,7 @@
 
 (deftest function-garbage-move5
   (testing ""
-    (is (= (play-game (initial-board)  (fn [_] [["e0" "a4"] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] ["e0" "a4"]) garbage-f)
            [[0 1] [["e0" "a4"]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
@@ -630,8 +630,21 @@
 
 (deftest function-garbage-move6
   (testing ""
-    (is (= (play-game (initial-board)  (fn [_] [[weird-obj ""] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] {:move [weird-obj ""] :state nil}) garbage-f)
            [[0 1] [[weird-obj ""]]
+            [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R] :invalid-move]))))
+
+(deftest function-garbage-move6
+  (testing ""
+    (is (= (play-game (initial-board)  (fn [_] [[weird-obj ""] nil]) garbage-f)
+           [[0 1] [[[weird-obj ""] nil]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
              \- \- \- \- \- \- \- \-
@@ -643,7 +656,7 @@
 
 (deftest function-garbage-move7
   (testing ""
-    (is (= (play-game (initial-board)  (fn [_] [[[-1 0.9] [true false]] nil]) garbage-f)
+    (is (= (play-game (initial-board)  (fn [_] [[-1 0.9] [true false]]) garbage-f)
            [[0 1] [[[-1 0.9] [true false]]]
             [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
@@ -670,7 +683,7 @@
 
 (deftest function-nil-move2
   (testing ""
-    (is (= (play-game (initial-board) (fn [_] [["e2" "e4"] nil]) invalid-move-f)
+    (is (= (play-game (initial-board) (fn [_] ["e2" "e4"]) invalid-move-f)
            [[1 0] [["e2" "e4"] nil]
                [\r \n \b \q \k \b \n \r
                 \p \p \p \p \p \p \p \p

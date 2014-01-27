@@ -31,7 +31,8 @@ Enter your moves as follow in the stdin:
 
     (play-game (initial-board) random-f random-f)
 
-Sit back and enjoy the game. Watch out the CPU is going to get hot and the function will never return... :)
+Sit back and enjoy the game. Watch out the CPU is going to get hot and the function might never return...
+Unless you're lucky enough that one of the random algorithm acheives a check-mate over its adversary. :)
 
 ## License
 

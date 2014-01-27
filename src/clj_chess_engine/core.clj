@@ -798,7 +798,7 @@
                  (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state :iteration new-iteration})))
              ))))))
 
-(defn play-game [board f1 f2]
+(defn play-game [{ board :board f1 :f1 f2 :f2}]
   (play-game-rec {:board board :f1 f1 :f2 f2 :white-turn? true :move-history []})
   )
 ;; => [score move-history last-board invalid-move? check-mate?]
@@ -825,7 +825,7 @@
 
 
 (defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
-                                 (let [result (play-game (initial-board) f1 f2)]
+                                 (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
                                    result)))
 
 
@@ -892,16 +892,20 @@
 ;; (play-game (initial-board) interactive-f random-f)
 ;;(rand-int 42)
 
+(defn wrapper-display-f [f]
+  (fn [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state :as game-context}]
+    (do
+     (display-board board)
+     ;;(println (if am-i-white? "white: " "black: "))
+     ;;(println "valid moves:" valid-moves)
+     (f game-context))))
 
-(def database (atom {
-                     :contenders [{:login "Philip" :functions [{:id "daredevil" :function random-f :past-battles [{:against "superman" :scores []}]}]}
-                                  {:login "Nicholas" :functions [{:id "superman" :function random-f :past-battles [{:against "daredevil" }]}]}]}))
 
-(defn tournement []
- (let [result (play-game (initial-board) random-f random-f)]
+(defn mini-tournement []
+  (let [result (play-game {:board (initial-board) :f1 random-f :f2 random-f})]
    (println result)
    (recur)))
 
 
 (defn -main []
- (tournement))
+ (mini-tournement))

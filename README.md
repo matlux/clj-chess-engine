@@ -4,14 +4,21 @@ A Clojure application designed to play chess and get functions to compete agains
 
 ## Usage
 
+### Quick Demo
+
+clone the repo
+Launch
+
+    lein run
+
 ### Play interactively against a random algorithm
 
-* clone the repo
-* start repl
+clone the repo
+start repl
 
     lein repl
 
-* enter the following commands
+enter the following commands
 
     (use 'clj-chess-engine.core)
     (play-game (initial-board) interactive-f random-f)

@@ -7,7 +7,8 @@ A Clojure application designed to play chess and get functions to compete agains
 ### Quick Demo
 
 clone the repo
-Launch
+
+and launch
 
     lein run
 

@@ -1,4 +1,6 @@
 (ns clj-chess-engine.core
+  (:use [clojail.core :only [sandbox]]
+        [clojail.testers :only [blacklist-symbols blacklist-objects secure-tester]])
   (:require [clojure.math.numeric-tower :as math])
   (:import clojure.lang.PersistentVector))
 
@@ -763,6 +765,9 @@
 (defn execute [f game-context]
   (try (f game-context )
        (catch Throwable t (do (println "caught exception inside chess player function" t) {:move :caught-exception :exception t}))))
+(defn execute-no-catch [f game-context]
+  (f game-context )
+  )
 
 (defn parse-f-return [ret]
   (if  (map? ret)
@@ -777,7 +782,7 @@
         {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate})
       (let [new-iteration (if (nil? iteration) 1 (inc iteration))
             in-check? (check? board (not white-turn?) move-history)
-            valid-moves (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history))
+            valid-moves (into [] (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history)))
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
@@ -888,6 +893,14 @@
       {:move (get v move) :state iteration})) )
 
 
+(def random-f-form '(fn random-f [{board :board, am-i-white? :white-turn, valid-moves :valid-moves, ic :in-check?, h :history, s :state}]
+                      (let [v (into [] valid-moves)
+                            iteration (if (nil? s) (+ 1 (if am-i-white? 0 1)) (+ 2 s))]
+                        (let [move (rand-int (count valid-moves))]
+                          {:move (get v move), :state iteration}))))
+
+
+
 ;; (play-game (initial-board) interactive-f f2)
 ;; (play-game (initial-board) interactive-f random-f)
 ;;(rand-int 42)
@@ -906,6 +919,50 @@
    (println result)
    (recur)))
 
+(defn sb [] (sandbox secure-tester :timeout 5000))
+
+(defn sand-boxed-mini-tournement []
+  (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 random-f})]
+   (println result)
+   (recur)))
+
+;;(sand-boxed-mini-tournement)
+
+((fn [in] ((sb) (list random-f-form in))) {:valid-moves [["e5" "e7"]]})
+((sb) (list random-f-form {}))
 
 (defn -main []
- (mini-tournement))
+ (sand-boxed-mini-tournement))
+
+
+
+(defmacro with-time-assoced
+  "Evaluates exprs in a context in which *out* is bound to a fresh
+  StringWriter.  Returns the assoced map with :time -> containing the execution time."
+  [& body]
+  `(let [s# (new java.io.StringWriter)]
+     (binding [*out* s#]
+       (assoc (time ~@body) :time (str s#)))))
+
+
+;;(sb '(def x))
+;; (try ((sb) '(loop []
+;;               (println "hello")
+;;               (recur)))
+;;      (catch Throwable t (println "caught exception inside chess player function" t)))
+
+;(println (sb '(+ 1 2)))
+;; ((sb) '*ns*)
+
+
+;; ((fn [in] ((sb) (list random-f-form in))) {:board (initial-board), :white-turn true, :valid-moves (vector ["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"]), :in-check? false, :history [], :state nil} )
+
+;; ((fn random-f
+;;    [{board :board, am-i-white? :white-turn, valid-moves :valid-moves, ic :in-check?, h :history, s :state}]
+;;    (let [v (into [] valid-moves)
+;;          iteration (if (nil? s) (+ 1 (if am-i-white? 0 1)) (+ 2 s))]
+;;      (let [move (rand-int (count valid-moves))]
+;;        {:move (get v move), :state iteration})))
+;;  {:board (initial-board), :white-turn true, :valid-moves (vector ["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"]), :in-check? false, :history [], :state nil})
+
+;; [f2 f3] [f2 f4] [g1 f3] [g1 h3] [e2 e3] [e2 e4] [d2 d3] [d2 d4] [c2 c3] [c2 c4] [b2 b3] [b2 b4] [a2 a3] [a2 a4] [b1 c3] [b1 a3]

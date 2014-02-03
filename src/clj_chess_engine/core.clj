@@ -762,9 +762,21 @@
   (if white-turn? [0 1] [1 0]))
 (def opposite-color-wins forfeit)
 
+(defn stacktrace [t]
+  (with-out-str (clojure.stacktrace/print-stack-trace t)))
+
 (defn execute [f game-context]
   (try (f game-context )
-       (catch Throwable t (do (println "caught exception inside chess player function" t) {:move :caught-exception :exception t}))))
+       (catch java.util.concurrent.TimeoutException t
+         (do (println "caught TimeoutException because chess player function did not return in time" t)
+             {:result :too-slow-to-move :exception (.toString t) :stacktrace (stacktrace t)}))
+       (catch java.lang.SecurityException t
+         (do (println "caught security exception inside chess player function " (.getMessage t))
+             {:result :security-exception :exception (.toString t) :stacktrace (stacktrace t)}))
+       (catch Throwable t
+         (do (println "caught exception inside chess player function" t)
+             {:result :caught-exception :exception (.toString t) :stacktrace (stacktrace t)}))
+       ))
 (defn execute-no-catch [f game-context]
   (f game-context )
   )
@@ -786,9 +798,9 @@
             f-return (if white-turn?
                        (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
                        (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
-            {move :move new-state :state exception :exception} (parse-f-return f-return)]
+            {result :result move :move new-state :state exception :exception :as f-result} (parse-f-return f-return)]
         (cond (> new-iteration 500)         {:score [1/2 1/2] :history (conj move-history new-iteration) :board board :result :draw-by-number-of-iteration}
-              (= move :caught-exception) {:score (forfeit white-turn?) :history (conj move-history exception ) :board board :result :caught-exception}
+              (not (nil? exception)) (merge {:score (forfeit white-turn?) :history (conj move-history :exception ) :board board} f-result)
               :else (let [valid? (is-move-valid? board white-turn? move-history move)
                 norm-move (normalize move)
                 new-history (conj move-history norm-move)]
@@ -930,8 +942,8 @@
    (recur)))
 
 (defn sb
-  ([] (sandbox secure-tester :timeout 5000))
-  ([form] (fn [arg] ((sb) (dbg (list form arg))))))
+  ([] (sandbox (conj secure-tester (blacklist-objects [java.lang.Thread])) :timeout 5000))
+  ([form] (fn [arg] ((sb) (list form arg)))))
 
 
 

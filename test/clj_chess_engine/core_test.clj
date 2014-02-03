@@ -546,22 +546,23 @@
           :result :invalid-move}))))
 
 
-(defn invalid-move-f [game-context]
+(defn invalid-move-f [_]
   nil)
-(defn garbage-f [game-context]
+(defn garbage-f [_]
   -1)
 
 (def ex (Exception. "this is an exception"))
-(defn exception-f [game-context]
+
+(defn exception-f [_]
   (throw ex))
 
 
 
 (deftest function-raises-exception
   (testing ""
-    (is (= (play-game {:board (initial-board) :f1 exception-f :f2 exception-f})
+    (is (= (dissoc (play-game {:board (initial-board) :f1 exception-f :f2 exception-f}) :stacktrace)
            {:score [0 1]
-            :history [ex]
+            :history [:exception]
             :board [\r \n \b \q \k \b \n \r
               \p \p \p \p \p \p \p \p
               \- \- \- \- \- \- \- \-
@@ -570,6 +571,7 @@
               \- \- \- \- \- \- \- \-
               \P \P \P \P \P \P \P \P
               \R \N \B \Q \K \B \N \R]
+            :exception "java.lang.Exception: this is an exception"
             :result :caught-exception}))))
 (deftest function-garbage-move
   (testing ""
@@ -837,9 +839,9 @@
 
 (deftest security-infinite-loop
   (testing ""
-    (is (= (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list '(fn [_] (loop [] (recur))) in))) :f2 invalid-move-f})
+    (is (= (dissoc (play-game {:board (initial-board) :f1 (sb '(fn [_] (loop [] (recur)))) :f2 invalid-move-f}) :stacktrace)
            {:score [0 1]
-            :history [[:w7]]
+            :history [:exception]
             :board [\r \n \b \q \k \b \n \r
              \p \p \p \p \p \p \p \p
              \- \- \- \- \- \- \- \-
@@ -848,7 +850,24 @@
              \- \- \- \- \- \- \- \-
              \P \P \P \P \P \P \P \P
              \R \N \B \Q \K \B \N \R]
+            :exception "java.util.concurrent.TimeoutException: Execution timed out."
             :result :too-slow-to-move}))))
+
+(deftest security-spawn-thread
+  (testing ""
+    (is (= (dissoc (play-game {:board (initial-board) :f1 (sb '(fn [_] (Thread.))) :f2 invalid-move-f}) :stacktrace)
+           {:score [0 1]
+            :history [:exception]
+            :board [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R]
+            :exception "java.lang.SecurityException: You tripped the alarm! class java.lang.Thread is bad!"
+            :result :security-exception}))))
 
 
 ;;((fn [in] ((sb) (concat '((fn [_] (loop [] (recur)))) (list in)))) {})

@@ -774,7 +774,7 @@
          (do (println "caught security exception inside chess player function " (.getMessage t))
              {:result :security-exception :exception (.toString t) :stacktrace (stacktrace t)}))
        (catch Throwable t
-         (do (println "caught exception inside chess player function" t)
+         (do (println "caught exception inside chess player function" (.getMessage t))
              {:result :caught-exception :exception (.toString t) :stacktrace (stacktrace t)}))
        ))
 (defn execute-no-catch [f game-context]
@@ -787,7 +787,7 @@
     {:move ret}))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn play-game-rec [{board :board f1 :f1 f2 :f2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2 iteration :iteration}]
+(defn play-game-rec [{board :board f1 :f1 f2 :f2 id1 :id1 id2 :id2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2 iteration :iteration}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
@@ -815,8 +815,8 @@
                  (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state :iteration new-iteration})))
              ))))))
 
-(defn play-game [{ board :board f1 :f1 f2 :f2}]
-  (play-game-rec {:board board :f1 f1 :f2 f2 :white-turn? true :move-history []})
+(defn play-game [game-init]
+  (play-game-rec (merge game-init {:white-turn? true :move-history []}))
   )
 ;; => [score move-history last-board invalid-move? check-mate?]
 ;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]
@@ -937,7 +937,7 @@
 
 
 (defn mini-tournement []
-  (let [result (play-game {:board (initial-board) :f1 random-f :f2 random-f})]
+  (let [result (play-game {:board (initial-board) :f1 random-f :f2 random-f :id1 "daredevil" :id2 "wonderboy"})]
    (println result)
    (recur)))
 
@@ -948,7 +948,7 @@
 
 
 (defn sand-boxed-mini-tournement []
-  (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 (sb random-f-form-print)})]
+  (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 (sb random-f-form-print) :id1 "daredevil" :id2 "wonderboy"})]
    (println result)
    (recur)))
 

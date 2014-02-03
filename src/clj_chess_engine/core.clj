@@ -891,6 +891,16 @@
     (let [move (rand-int (count valid-moves))]
       (println "choosen move:" (get v move))
       {:move (get v move) :state iteration})) )
+(def random-f-form-print '(fn random-f [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state}]
+   (let [v (into [] valid-moves)
+         iteration (if (nil? s) (+ 1 (if am-i-white? 0 1)) (+ 2 s))]
+     ;;(display-board board)
+     (println (if am-i-white? "white: " "black: "))
+     (println "valid moves:" valid-moves)
+     (println "iteration:" iteration)
+     (let [move (rand-int (count valid-moves))]
+       (println "choosen move:" (get v move))
+       {:move (get v move) :state iteration})) ))
 
 
 (def random-f-form '(fn random-f [{board :board, am-i-white? :white-turn, valid-moves :valid-moves, ic :in-check?, h :history, s :state}]
@@ -919,10 +929,14 @@
    (println result)
    (recur)))
 
-(defn sb [] (sandbox secure-tester :timeout 5000))
+(defn sb
+  ([] (sandbox secure-tester :timeout 5000))
+  ([form] (fn [arg] ((sb) (dbg (list form arg))))))
+
+
 
 (defn sand-boxed-mini-tournement []
-  (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 random-f})]
+  (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 (sb random-f-form-print)})]
    (println result)
    (recur)))
 

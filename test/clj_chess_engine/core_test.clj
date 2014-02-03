@@ -751,7 +751,7 @@
 
 (deftest keyword_move_bad_format
   (testing ""
-    (is (= (play-game {:board (initial-board) :f1 (fn [_] [:e9 :e4]) :f2 invalid-move-f})
+    (is (= (play-game {:board (initial-board) :f1 (sb '(fn [_] [:e9 :e4])) :f2 invalid-move-f})
            {:score [0 1]
             :history [["e9" "e4"]]
             :board [\r \n \b \q \k \b \n \r

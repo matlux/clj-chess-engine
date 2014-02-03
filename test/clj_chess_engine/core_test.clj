@@ -869,5 +869,21 @@
             :exception "java.lang.SecurityException: You tripped the alarm! class java.lang.Thread is bad!"
             :result :security-exception}))))
 
+(deftest wrong-arrity-function
+  (testing ""
+    (is (= (dissoc (play-game {:board (initial-board) :f1 (sb '(fn [_ _] [:e5 :e6])) :f2 invalid-move-f}) :stacktrace :exception)
+           {:score [0 1]
+            :history [:exception]
+            :board [\r \n \b \q \k \b \n \r
+             \p \p \p \p \p \p \p \p
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \- \- \- \- \- \- \- \-
+             \P \P \P \P \P \P \P \P
+             \R \N \B \Q \K \B \N \R]
+  ;;          :exception "java.lang.SecurityException: You tripped the alarm! class java.lang.Thread is bad!"
+            :result :caught-exception}))))
+
 
 ;;((fn [in] ((sb) (concat '((fn [_] (loop [] (recur)))) (list in)))) {})

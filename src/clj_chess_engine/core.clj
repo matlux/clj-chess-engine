@@ -765,8 +765,25 @@
 (defn stacktrace [t]
   (with-out-str (clojure.stacktrace/print-stack-trace t)))
 
-(defn execute [f game-context]
-  (try (f game-context )
+(defn get-playing-id [{:keys [id1 id2 white-turn?]
+                       :or { id1 "undefined"
+                            id2 "undefined"}}]
+  (if white-turn?
+    id1
+    id2))
+(defn get-playing-f-state [{:keys [state-f1 state-f2 white-turn?]}]
+  (if white-turn?
+    state-f1
+    state-f2))
+(defn get-playing-f [{:keys [f1 f2 white-turn?]}]
+  (if white-turn?
+    f1
+    f2))
+
+;;(get-playing-id { })
+
+(defn execute [f context]
+  (try (f context )
        (catch java.util.concurrent.TimeoutException t
          (do (println "caught TimeoutException because chess player function did not return in time" t)
              {:result :too-slow-to-move :exception (.toString t) :stacktrace (stacktrace t)}))
@@ -774,7 +791,7 @@
          (do (println "caught security exception inside chess player function " (.getMessage t))
              {:result :security-exception :exception (.toString t) :stacktrace (stacktrace t)}))
        (catch Throwable t
-         (do (println "caught exception inside chess player function" (.getMessage t))
+         (do (println "caught exception inside chess player function" (.getMessage t) ", by" (:id context))
              {:result :caught-exception :exception (.toString t) :stacktrace (stacktrace t)}))
        ))
 (defn execute-no-catch [f game-context]
@@ -787,7 +804,7 @@
     {:move ret}))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn play-game-rec [{board :board f1 :f1 f2 :f2 id1 :id1 id2 :id2 white-turn? :white-turn? move-history :move-history state-f1 :state-f1 state-f2 :state-f2 iteration :iteration}]
+(defn play-game-rec [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration] :as game-context}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
@@ -795,9 +812,7 @@
       (let [new-iteration (if (nil? iteration) 1 (inc iteration))
             in-check? (check? board (not white-turn?) move-history)
             valid-moves (into [] (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history)))
-            f-return (if white-turn?
-                       (execute f1 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f1})
-                       (execute f2 {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state state-f2}))
+            f-return (execute (get-playing-f game-context) {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state (get-playing-f-state game-context) :id (get-playing-id game-context)})
             {result :result move :move new-state :state exception :exception :as f-result} (parse-f-return f-return)]
         (cond (> new-iteration 500)         {:score [1/2 1/2] :history (conj move-history new-iteration) :board board :result :draw-by-number-of-iteration}
               (not (nil? exception)) (merge {:score (forfeit white-turn?) :history (conj move-history :exception ) :board board} f-result)

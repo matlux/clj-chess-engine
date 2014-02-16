@@ -1,7 +1,8 @@
 (ns clj-chess-engine.core
   (:use [clojail.core :only [sandbox]]
         [clojail.testers :only [blacklist-symbols blacklist-objects secure-tester]])
-  (:require [clojure.math.numeric-tower :as math])
+  (:require [clojure.math.numeric-tower :as math]
+            [clojure.core.async :refer [<! >! go]])
   (:import clojure.lang.PersistentVector))
 
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
@@ -803,8 +804,14 @@
     ret
     {:move ret}))
 
+(defn log [channel res]
+  (do
+    (when channel
+      (go (>! channel res)))
+    res))
+
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn play-game-rec [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration] :as game-context}]
+(defn play-game-rec [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration channel] :as game-context}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
@@ -825,9 +832,11 @@
                    move-xy (move2move-xy  norm-move)
                    en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
                    real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
-               (if white-turn?
-                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 new-state :state-f2 state-f2 :iteration new-iteration})
-                 (recur {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :state-f1 state-f1 :state-f2 new-state :iteration new-iteration})))
+               (recur (log channel (merge
+                                    {:board (apply-move board real-move) :f1 f1 :f2 f2 :white-turn? (not white-turn?) :move-history new-history :channel channel :iteration new-iteration}
+                                    (if white-turn?
+                                      {:state-f1 new-state :state-f2 state-f2}
+                                      {:state-f1 state-f1 :state-f2 new-state})))))
              ))))))
 
 (defn play-game [game-init]

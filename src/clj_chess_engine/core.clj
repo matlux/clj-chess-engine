@@ -2,7 +2,8 @@
   (:use [clojail.core :only [sandbox]]
         [clojail.testers :only [blacklist-symbols blacklist-objects secure-tester]])
   (:require [clojure.math.numeric-tower :as math]
-            [clojure.core.async :refer [<! >! go]])
+            [clojure.core.async :refer [<! >! go]]
+            [clojure.algo.monads :as m])
   (:import clojure.lang.PersistentVector))
 
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
@@ -851,13 +852,26 @@
                                       {:state-f1 state-f1 :state-f2 new-state})))))
              ))))))
 
+(def play-game-step-monad
+  (m/domonad m/state-m
+             [a play-game-step]
+             a))
+
+(defn game-loop [init-state monadic-step]
+  (loop [state init-state]
+    (let [[v s] (monadic-step state)]
+     (if v
+       s
+       (recur s)))))
+
+
+
 (defn play-game [game-init]
-  (loop [state (merge game-init {:white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
-    (let [[v s] (play-game-step state)]
-      (if v
-        s
-        (recur s))))
-  )
+  (let [state (merge game-init {:white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
+    (game-loop state play-game-step-monad)))
+
+
+
 ;;for testing only
 (defn play-game-rec [game-init]
   (loop [state (merge game-init {:game-id (str (java.util.UUID/randomUUID))})]
@@ -903,7 +917,8 @@
 
 (board-seq  [["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"]]
             [["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"]])
-;;(play-scenario  (move2move-xy-vec [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
+
+;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]])
 ;; => check-mate
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move

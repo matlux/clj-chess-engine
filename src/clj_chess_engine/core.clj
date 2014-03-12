@@ -807,32 +807,40 @@
 (defn log [channel res]
   (do
     (when channel
-      (go (>! channel res)))
+      (println "about to send IGU to channel")
+      (go (>! channel res))
+      (println "in-game-update sent to channel"))
     res))
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
-(defn play-game-rec [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration channel game-id] :as game-context}]
+(defn play-game-step [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration channel game-id] :as game-context}]
   (if (check-mate? board white-turn? move-history)
       (do
         (println "check-mate!")
-        {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate})
+        (vector true {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate}))
       (let [new-iteration (if (nil? iteration) 1 (inc iteration))
             in-check? (check? board (not white-turn?) move-history)
             valid-moves (into [] (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history)))
-            f-return (execute (get-playing-f game-context) {:board board :white-turn white-turn? :valid-moves valid-moves :in-check? in-check? :history move-history :state (get-playing-f-state game-context) :id (get-playing-id game-context)})
+            f-return (execute (get-playing-f game-context) {:board board
+                                                            :white-turn white-turn?
+                                                            :valid-moves valid-moves
+                                                            :in-check? in-check?
+                                                            :history move-history
+                                                            :state (get-playing-f-state game-context)
+                                                            :id (get-playing-id game-context)})
             {result :result move :move new-state :state exception :exception :as f-result} (parse-f-return f-return)]
-        (cond (> new-iteration 500)         {:score [1/2 1/2] :history (conj move-history new-iteration) :board board :result :draw-by-number-of-iteration}
-              (not (nil? exception)) (merge {:score (forfeit white-turn?) :history (conj move-history :exception ) :board board} f-result)
+        (cond (> new-iteration 500)         (vector true {:score [1/2 1/2] :history (conj move-history new-iteration) :board board :result :draw-by-number-of-iteration})
+              (not (nil? exception)) (vector true (merge {:score (forfeit white-turn?) :history (conj move-history :exception ) :board board} f-result))
               :else (let [valid? (is-move-valid? board white-turn? move-history move)
                 norm-move (normalize move)
                 new-history (conj move-history norm-move)]
             (if (not valid?)
-              {:score (forfeit white-turn?) :history new-history :board board :result :invalid-move}
+              (vector true {:score (forfeit white-turn?) :history new-history :board board :result :invalid-move})
              (let [
                    move-xy (move2move-xy  norm-move)
                    en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
                    real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
-               (recur (log channel (merge
+               (vector false (log channel (merge
                                     {:board (apply-move board real-move)
                                      :f1 f1 :f2 f2 :id1 id1 :id2 id2
                                      :msg-type :in-game-update
@@ -844,10 +852,24 @@
              ))))))
 
 (defn play-game [game-init]
-  (play-game-rec (merge game-init {:white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))}))
+  (loop [state (merge game-init {:white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
+    (let [[v s] (play-game-step state)]
+      (if v
+        s
+        (recur s))))
+  )
+;;for testing only
+(defn play-game-rec [game-init]
+  (loop [state (merge game-init {:game-id (str (java.util.UUID/randomUUID))})]
+    (let [[v s] (play-game-step state)]
+      (if v
+        s
+        (recur s))))
   )
 ;; => [score move-history last-board invalid-move? check-mate?]
 ;;example => [[1 0] [["e2" "e4"] ["e7" "e5"]] [\- \- \- \k \- ....]]
+
+;;(play-game {})
 
 
 
@@ -873,7 +895,14 @@
                                  (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
                                    result)))
 
+(defn board-seq [white-moves black-moves]
+  (let [f1 (create-fn white-moves)
+        f2 (create-fn black-moves)]
+                                 (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
+                                   result)))
 
+(board-seq  [["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"]]
+            [["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"]])
 ;;(play-scenario  (move2move-xy-vec [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 ;; => check-mate
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
@@ -983,8 +1012,8 @@
 
 ;;(sand-boxed-mini-tournement)
 
-((fn [in] ((sb) (list random-f-form in))) {:valid-moves [["e5" "e7"]]})
-((sb) (list random-f-form {}))
+;;((fn [in] ((sb) (list random-f-form in))) {:valid-moves [["e5" "e7"]]})
+;;((sb) (list random-f-form {}))
 
 (defn -main []
  (sand-boxed-mini-tournement))
@@ -1021,3 +1050,4 @@
 ;;  {:board (initial-board), :white-turn true, :valid-moves (vector ["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"]), :in-check? false, :history [], :state nil})
 
 ;; [f2 f3] [f2 f4] [g1 f3] [g1 h3] [e2 e3] [e2 e4] [d2 d3] [d2 d4] [c2 c3] [c2 c4] [b2 b3] [b2 b4] [a2 a3] [a2 a4] [b1 c3] [b1 a3]
+;;(not (= [false {:move-history [["a2" "a3"] ["f7" "f5"] ["c2" "c4"] ["e7" "e5"] ["d1" "a4"] ["d8" "f6"] ["d2" "d3"] ["f6" "h4"] ["g2" "g4"] ["b8" "c6"] ["b2" "b4"] ["g7" "g6"] ["c1" "h6"] ["f8" "h6"] ["e2" "e3"] ["h4" "h3"] ["g4" "f5"] ["h6" "g5"] ["g1" "f3"] ["g8" "e7"] ["e1" "d2"] ["h3" "h5"] ["a4" "c2"] ["e7" "d5"] ["c4" "d5"] ["g5" "f6"] ["c2" "a4"] ["e5" "e4"] ["f3" "g5"] ["f6" "b2"] ["a4" "a5"] ["b2" "c1"] ["d2" "c1"] ["h5" "e2"] ["a5" "c7"] ["e2" "g4"] ["c7" "c6"] ["g4" "h4"] ["h1" "g1"] ["h4" "f2"] ["d3" "d4"] ["f2" "g2"] ["b4" "b5"] ["b7" "c6"] ["g5" "h7"] ["e8" "e7"] ["a3" "a4"] ["g2" "g4"] ["b1" "d2"] ["c8" "a6"] ["h2" "h4"] ["a6" "b7"] ["g1" "g4"] ["e7" "d6"] ["g4" "g2"] ["a8" "d8"] ["f1" "e2"] ["c6" "d5"]], :iteration 1, :state-f1 nil, :f1 #<core_test$fn__1398$fn__1399 clj_chess_engine.core_test$fn__1398$fn__1399@5d77a38f>, :f2 #<core_test$fn__1398$fn__1401 clj_chess_engine.core_test$fn__1398$fn__1401@4e84c320>, :board [\- \- \- \r \- \- \- \r \p \b \- \p \- \- \- \N \- \- \- \k \- \- \p \- \- \P \- \p \- \P \- \- \P \- \- \P \p \- \- \P \- \- \- \- \P \- \- \- \- \- \- \N \B \- \R \- \R \- \K \- \- \- \- \-], :white-turn? true, :game-id nil, :channel nil, :msg-type :in-game-update, :id1 nil, :id2 nil, :state-f2 nil}] [false {:history [["a2" "a3"] ["f7" "f5"] ["c2" "c4"] ["e7" "e5"] ["d1" "a4"] ["d8" "f6"] ["d2" "d3"] ["f6" "h4"] ["g2" "g4"] ["b8" "c6"] ["b2" "b4"] ["g7" "g6"] ["c1" "h6"] ["f8" "h6"] ["e2" "e3"] ["h4" "h3"] ["g4" "f5"] ["h6" "g5"] ["g1" "f3"] ["g8" "e7"] ["e1" "d2"] ["h3" "h5"] ["a4" "c2"] ["e7" "d5"] ["c4" "d5"] ["g5" "f6"] ["c2" "a4"] ["e5" "e4"] ["f3" "g5"] ["f6" "b2"] ["a4" "a5"] ["b2" "c1"] ["d2" "c1"] ["h5" "e2"] ["a5" "c7"] ["e2" "g4"] ["c7" "c6"] ["g4" "h4"] ["h1" "g1"] ["h4" "f2"] ["d3" "d4"] ["f2" "g2"] ["b4" "b5"] ["b7" "c6"] ["g5" "h7"] ["e8" "e7"] ["a3" "a4"] ["g2" "g4"] ["b1" "d2"] ["c8" "a6"] ["h2" "h4"] ["a6" "b7"] ["g1" "g4"] ["e7" "d6"] ["g4" "g2"] ["a8" "d8"] ["f1" "e2"] ["c6" "d5"] nil], :score [0 1], :board [\- \- \- \r \- \- \- \r \p \b \- \p \- \- \- \N \- \- \- \k \- \- \p \- \- \P \- \p \- \P \- \- \P \- \- \P \p \- \- \P \- \- \- \- \P \- \- \- \- \- \- \N \B \- \R \- \R \- \K \- \- \- \- \-], :result :invalid-move}]))

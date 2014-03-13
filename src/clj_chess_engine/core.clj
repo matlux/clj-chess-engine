@@ -3,7 +3,7 @@
         [clojail.testers :only [blacklist-symbols blacklist-objects secure-tester]])
   (:require [clojure.math.numeric-tower :as math]
             [clojure.core.async :refer [<! >! go]]
-            [clojure.algo.monads :as m])
+            [clojure.algo.monads :as m :refer [domonad state-m fetch-state]])
   (:import clojure.lang.PersistentVector))
 
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
@@ -852,25 +852,37 @@
                                       {:state-f1 state-f1 :state-f2 new-state})))))
              ))))))
 
-(def play-game-step-monad
-  (m/domonad m/state-m
-             [a play-game-step]
-             a))
+(def game-step
+  (domonad state-m
+           [a play-game-step]
+           a))
 
-(defn game-loop [init-state monadic-step]
-  (loop [state init-state]
-    (let [[v s] (monadic-step state)]
-     (if v
-       s
-       (recur s)))))
+;; (defn game-loop [init-state monadic-step]
+;;   (loop [state init-state]
+;;     (let [[v s] (monadic-step state)]
+;;      (if v
+;;        s
+;;        (recur s)))))
+
+;; (defn play-game-fast [game-init]
+;;   (let [state (merge game-init {:board (initial-board) :white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
+;;     (game-loop state game-step)))
+
+(defn game-seq [monadic-step init-state]
+  ((fn game-seq-r [[v s]]
+     (lazy-seq
+      (if v
+        (list [v s] )
+        (cons [v s] (game-seq-r (monadic-step s))))))
+   (monadic-step init-state)))
 
 
+(defn play-game-seq [step game-init]
+  (let [state (merge {:board (initial-board) :white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))} game-init)]
+    (game-seq step state)))
 
-(defn play-game [game-init]
-  (let [state (merge game-init {:white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
-    (game-loop state play-game-step-monad)))
 
-
+;;(second (play-scenario-seq  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 
 ;;for testing only
 (defn play-game-rec [game-init]
@@ -905,20 +917,64 @@
 
 
 
-(defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
-                                 (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
+
+;; (defn play-scenario [scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
+;;                                  (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
+;;                                    result)))
+
+
+(defn play-scenario-seq [step scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
+                                 (let [result (play-game-seq step {:f1 f1 :f2 f2})]
                                    result)))
 
-(defn board-seq [white-moves black-moves]
-  (let [f1 (create-fn white-moves)
-        f2 (create-fn black-moves)]
-                                 (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
-                                   result)))
+;; (defn play-scenario-seq [scenario]
+;;   (play-scenario-with-step-seq game-step scenario))
 
-(board-seq  [["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"]]
-            [["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"]])
+(defn seq-result [s]
+  (-> s
+      last
+      second))
 
-;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]])
+;; (defn play [f step param]
+;;   (play-seq
+;;    (f step param)))
+
+(defn play-game [game-init]
+  (seq-result
+   (play-game-seq game-step game-init)))
+
+
+(defn play-scenario [scenario]
+  (seq-result
+   (play-scenario-seq game-step scenario)))
+
+
+;; (defn board-seq [white-moves black-moves]
+;;   (let [f1 (create-fn white-moves)
+;;         f2 (create-fn black-moves)]
+;;                                  (let [result (play-game {:board (initial-board) :f1 f1 :f2 f2})]
+;;                                    result)))
+
+;; (board-seq  [["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"]]
+;;             [["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"]])
+
+(defn append-val [key val]
+  (fn [s]
+    (let [old-vals (get s key [])
+	  new-s   (assoc s key (conj old-vals val))]
+      [old-vals new-s])))
+
+(comment
+  (second (play-scenario-seq
+          (domonad state-m
+                   [a game-step
+                    b (m/fetch-val :board)
+                    c (append-val :board-history b)]
+                   a)
+          [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ))
+ )
+
+;;(first (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 ;; => check-mate
 ;;(play-scenario  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "g6"] ["e8" "e7"]])
 ;; => invalid move
@@ -932,25 +988,7 @@
 
      move)))
 
-
-
-;; (play-game (initial-board) interactive-f interactive-f)
-
-;; first move is special
-
-;; what should be passed:
-;; board state
-
-;; pass a map with all the data
-;; {:board :last-move :color :white :avaliable-moves {} }
-
-;; [[:a1 :a3] state]
-;; set of avaliable moves
-
-;; returns move + state
-
-;; move is source location, destination
-
+;;; test functions
 
 (defn f1 [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
                             (let [move-seq (if (nil? s)
@@ -1031,7 +1069,7 @@
 ;;((sb) (list random-f-form {}))
 
 (defn -main []
- (sand-boxed-mini-tournement))
+ (mini-tournement))
 
 
 

@@ -3,7 +3,7 @@
         [clojail.testers :only [blacklist-symbols blacklist-objects secure-tester]])
   (:require [clojure.math.numeric-tower :as math]
             [clojure.core.async :refer [<! >! go]]
-            [clojure.algo.monads :as m :refer [domonad state-m fetch-state]])
+            [clojure.algo.monads :as m :refer [domonad state-m fetch-state fetch-val]])
   (:import clojure.lang.PersistentVector))
 
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
@@ -958,20 +958,30 @@
 ;; (board-seq  [["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"]]
 ;;             [["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"]])
 
-(defn append-val [key val]
+(defn append-val [key old-vals val]
   (fn [s]
-    (let [old-vals (get s key [])
+    (let [;old-vals (get s key [])
 	  new-s   (assoc s key (conj old-vals val))]
       [old-vals new-s])))
 
+(defn board-seq [moves]
+  (->>
+   (play-scenario-seq
+    game-step
+    moves) (map second) (map :board)))
+
 (comment
-  (second (play-scenario-seq
-          (domonad state-m
-                   [a game-step
-                    b (m/fetch-val :board)
-                    c (append-val :board-history b)]
-                   a)
-          [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ))
+  (->>
+   (play-scenario-seq
+    (domonad state-m
+             [bh (fetch-val :board-history)
+              a game-step
+              b (fetch-val :board)
+              c (append-val :board-history bh b)]
+             a)
+    [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) (map second) (map :board))
+  (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] )
+  (take 1 (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ))
  )
 
 ;;(first (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))

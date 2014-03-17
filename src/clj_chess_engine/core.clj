@@ -967,8 +967,8 @@
 (defn board-seq [moves]
   (->>
    (play-scenario-seq
-    game-step
-    moves) (map second) (map :board)))
+    (memoize game-step)
+    moves) (cons [false {:board (initial-board)}]) (map second) (map :board)))
 
 (comment
   (->>
@@ -981,8 +981,11 @@
              a)
     [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) (map second) (map :board))
   (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] )
-  (take 1 (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ))
- )
+  (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 9)
+
+  (->> )
+
+  )
 
 ;;(first (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 ;; => check-mate

@@ -9,6 +9,19 @@
 (defmacro dbg[x] `(let [x# ~x] (println "dbg:" '~x "=" x#) x#))
 (defmacro display-assert [x & args] `(let [x# ~x] (if x# true (do (println '~x "is wrong because =" x# "and [" '~@args "] = [" ~@args "]") false))))
 
+(defmacro profile
+  "Evaluates exprs in a context in which *out* is bound to a fresh
+  StringWriter.  Returns the assoced map with :time -> created by any nested printing
+  calls."
+  [& body]
+  `(let [s# (new java.io.StringWriter)
+         oldout# *out*
+         res# (binding [*out* s#]
+                (time (binding [*out* oldout#] ~@body)))]
+     (println "" '~@body "=" (str s#))
+     res#))
+
+
 (macroexpand '(display-assert (+ x 1) x))
 
 (defn initial-board []
@@ -852,6 +865,29 @@
                                       {:state-f1 state-f1 :state-f2 new-state})))))
              ))))))
 
+(defn replay-game-step [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration] :as game-context}]
+  (let [new-iteration (if (nil? iteration) 1 (inc iteration))
+        f-return (execute (get-playing-f game-context) {
+                                                        :white-turn white-turn?
+                                                        :history move-history
+                                                        :state (get-playing-f-state game-context)
+                                                        :id (get-playing-id game-context)})
+        {result :result move :move new-state :state exception :exception :as f-result} (parse-f-return f-return)
+        norm-move (normalize move)
+        new-history (conj move-history norm-move)
+        move-xy (move2move-xy  norm-move)
+        en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
+        real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
+    (vector false (merge
+                    {:board (apply-move board real-move)
+                     :f1 f1 :f2 f2 :id1 id1 :id2 id2
+                     :msg-type :in-game-update
+                     :white-turn? (not white-turn?) :move-history new-history :iteration new-iteration}
+                    (if white-turn?
+                      {:state-f1 new-state :state-f2 state-f2}
+                      {:state-f1 state-f1 :state-f2 new-state})))
+    ))
+
 (def game-step
   (domonad state-m
            [a play-game-step]
@@ -876,10 +912,12 @@
         (cons [v s] (game-seq-r (monadic-step s))))))
    (monadic-step init-state)))
 
+;;(def m-game-seq (memoize game-seq))
+(def m-game-seq game-seq)
 
 (defn play-game-seq [step game-init]
   (let [state (merge {:board (initial-board) :white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))} game-init)]
-    (game-seq step state)))
+    (profile (m-game-seq step state))))
 
 
 ;;(second (play-scenario-seq  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
@@ -964,10 +1002,13 @@
 	  new-s   (assoc s key (conj old-vals val))]
       [old-vals new-s])))
 
+;;(def m-game-step (memoize replay-game-step))
+(def m-game-step replay-game-step)
+
 (defn board-seq [moves]
   (->>
    (play-scenario-seq
-    (memoize game-step)
+    m-game-step
     moves) (cons [false {:board (initial-board)}]) (map second) (map :board)))
 
 (comment
@@ -981,7 +1022,9 @@
              a)
     [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) (map second) (map :board))
   (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] )
-  (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 9)
+  (profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8))
+  (macroexpand '(profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8)))
+
 
   (->> )
 
@@ -1085,14 +1128,15 @@
  (mini-tournement))
 
 
-
 (defmacro with-time-assoced
   "Evaluates exprs in a context in which *out* is bound to a fresh
-  StringWriter.  Returns the assoced map with :time -> containing the execution time."
+  StringWriter.  Returns the assoced map with :time -> created by any nested printing
+  calls."
   [& body]
-  `(let [s# (new java.io.StringWriter)]
+  `(let [s# (new java.io.StringWriter)
+         oldout# *out*]
      (binding [*out* s#]
-       (assoc (time ~@body) :time (str s#)))))
+       (assoc (time (binding [*out* oldout#] ~@body)) :time (str s#)))))
 
 
 ;;(sb '(def x))

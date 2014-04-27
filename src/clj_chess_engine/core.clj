@@ -21,8 +21,18 @@
      (println "" '~@body "=" (str s#))
      res#))
 
+(defn unfold
+  ([p f g seed tail-g]
+   (lazy-seq
+     (if (p seed)
+       (tail-g seed)
+       (cons (f seed)
+             (unfold p f g (g seed) tail-g)))))
+  ([p f g seed]
+     (unfold p f g seed (fn [_] ()))))
 
-(macroexpand '(display-assert (+ x 1) x))
+
+;;(macroexpand '(display-assert (+ x 1) x))
 
 (defn initial-board []
   [\r \n \b \q \k \b \n \r
@@ -904,13 +914,46 @@
 ;;   (let [state (merge game-init {:board (initial-board) :white-turn? true :move-history [] :game-id (str (java.util.UUID/randomUUID))})]
 ;;     (game-loop state game-step)))
 
-(defn game-seq [monadic-step init-state]
+(defn game-seq-old [monadic-step init-state]
   ((fn game-seq-r [[v s]]
      (lazy-seq
       (if v
         (list [v s] )
         (cons [v s] (game-seq-r (monadic-step s))))))
-   (monadic-step init-state)))
+   [false init-state]))
+
+(defn game-seq [monadic-step init-state]
+  (unfold
+   (fn [[v _]] v)
+   identity
+   (comp monadic-step second)
+   [false init-state]
+   list))
+
+
+;; (take 100 (unfold
+;;       (fn [x] false)
+;;       identity
+;;       inc
+;;       0))
+(comment
+ (second (game-seq-old play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
+ (second (unfold
+          (fn [[v _]] v)
+          identity
+          (comp play-game-step second)
+          [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}]
+          list))
+ ((comp play-game-step second) [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}])
+ (first (unfold
+         (fn [[v _]] v)
+         identity
+         (comp play-game-step second)
+         ((comp play-game-step second) [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}])
+         ))
+
+ (second (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2})))
+
 
 ;;(def m-game-seq (memoize game-seq))
 (def m-game-seq game-seq)
@@ -1009,7 +1052,7 @@
   (->>
    (play-scenario-seq
     m-game-step
-    moves) (cons [false {:board (initial-board)}]) (map second) (map :board)))
+    moves) (map second) (map :board)))
 
 (comment
   (->>
@@ -1022,7 +1065,7 @@
              a)
     [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) (map second) (map :board))
   (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] )
-  (profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8))
+  (profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 0))
   (macroexpand '(profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8)))
 
 

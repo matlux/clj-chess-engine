@@ -1083,24 +1083,25 @@
     (display-board board)
     (println (if am-i-white? "white: " "black: "))
     (println "valid moves:" valid-moves)
+    (println "enter next move (in format [\"a2\" \"a3\"]):")
     (let [move (read-string (read-line))]
 
      move)))
 
 ;;; test functions
+(comment
+ (defn f1 [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
+   (let [move-seq (if (nil? s)
+                    (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                    s)]
+     [(first move-seq) (next move-seq)]))
 
-(defn f1 [{board :board am-i-white? :white-turn ic :in-check? h :history s :state}]
-                            (let [move-seq (if (nil? s)
-                                             (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-                                             s)]
-                              [(first move-seq) (next move-seq)]))
-
-(defn f2 [{board :board am-i-white? :white-turn ic :in-check? h :history option-state :state}]
-  (let [b board
-        move-seq (if (nil? option-state)
-           (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
-           option-state)]
-    [(first move-seq) (next move-seq)]))
+ (defn f2 [{board :board am-i-white? :white-turn ic :in-check? h :history option-state :state}]
+   (let [b board
+         move-seq (if (nil? option-state)
+                    (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
+                    option-state)]
+     [(first move-seq) (next move-seq)])))
 
 (defn random-f [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state}]
   (let [v (into [] valid-moves)
@@ -1144,10 +1145,15 @@
      (println "valid moves:" valid-moves)
      (f game-context))))
 
-(defn trace-game-play [f1 f2]
-  (let [result (play-game {:board (initial-board) :f1 (wrapper-display-f f1) :f2 (wrapper-display-f f2) :id1 "daredevil" :id2 "wonderboy"})]
-   (println result)
-   ))
+(defn trace-game-play
+  ([f1 f2]
+     (let [result (play-game {:board (initial-board) :f1 (wrapper-display-f f1) :f2 (wrapper-display-f f2) :id1 "daredevil" :id2 "wonderboy"})]
+       (println result)
+       ))
+  ([f1]
+     (let [result (play-game {:board (initial-board) :f1 (wrapper-display-f f1) :f2 interactive-f :id1 "daredevil" :id2 "wonderboy"})]
+       (println result)
+       )))
 
 (defn mini-tournement []
   (let [result (play-game {:board (initial-board) :f1 random-f :f2 random-f :id1 "daredevil" :id2 "wonderboy"})]

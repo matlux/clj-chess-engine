@@ -1140,10 +1140,14 @@
   (fn [{board :board am-i-white? :white-turn valid-moves :valid-moves ic :in-check? h :history s :state :as game-context}]
     (do
      (display-board board)
-     ;;(println (if am-i-white? "white: " "black: "))
-     ;;(println "valid moves:" valid-moves)
+     (println (if am-i-white? "white: " "black: "))
+     (println "valid moves:" valid-moves)
      (f game-context))))
 
+(defn trace-game-play [f1 f2]
+  (let [result (play-game {:board (initial-board) :f1 (wrapper-display-f f1) :f2 (wrapper-display-f f2) :id1 "daredevil" :id2 "wonderboy"})]
+   (println result)
+   ))
 
 (defn mini-tournement []
   (let [result (play-game {:board (initial-board) :f1 random-f :f2 random-f :id1 "daredevil" :id2 "wonderboy"})]

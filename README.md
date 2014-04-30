@@ -34,11 +34,11 @@ Enter your moves as follow in the stdin:
 
 Sit back and enjoy the game. Watch out the CPU is going to get hot and the function will return after maximum 500 moves.
 
-### More explanation
+### The Chess Engine
 
-The play-game engine is a state engine which execute a game of chess in sequence. It takes 2 functions are parameters. Its aim is to
+play-game is a function which execute the Chess game. In other words play-game is a state engine which executes a game of chess in sequence. It takes 2 functions are parameters. Its aim is to
 
-* maintain the game state throughout the game
+* maintain the modification of game state throughout the game
 * work out the list of valid move for the next step
 * call :f1 i.e. the white function or :f2 i.e. the black function to know which move to make on every step
 * detects check and check-mates to stop the game

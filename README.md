@@ -8,6 +8,8 @@ A Clojure application designed to play chess and get functions to compete agains
 
 clone the repo
 
+    git clone git@github.com:matlux/clj-chess-engine.git
+
 and launch
 
     lein run

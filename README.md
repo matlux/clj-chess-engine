@@ -2,8 +2,6 @@
 
 A Clojure application designed to play chess and get functions to compete against one another.
 
-## Usage
-
 ### Quick Demo
 
 clone the repo
@@ -14,10 +12,27 @@ and launch
 
     lein run
 
+## Installation
+
+2 ways, clone this repo or create your own project to consume the library.
+
+### Clone the repo
+
+    git clone git@github.com:matlux/clj-chess-engine.git
+
+### Setup your own project and use the Chess engine as a library
+
+Add the following dependency to your project.clj
+
+```clojure
+[clj-chess-engine "0.1.0.5"]
+```
+
+## Usage
+
 ### Play interactively against a random algorithm
 
-clone the repo
-start repl
+start the repl
 
     lein repl
 
@@ -38,7 +53,7 @@ Sit back and enjoy the game. Watch out the CPU is going to get hot and the funct
 
 ### The Chess Engine
 
-play-game is a function which execute the Chess game. In other words play-game is a state engine which executes a game of chess in sequence. It takes 2 functions are parameters. Its aim is to
+play-game is a function which execute the Chess game. In other words play-game is a state engine which executes a game of chess in sequence. It takes 2 "Strategy" functions as parameters. Its aim is to
 
 * maintain the modification of game state throughout the game
 * work out the list of valid move for the next step
@@ -49,7 +64,9 @@ play-game is a function which execute the Chess game. In other words play-game i
 
 **Here are two function examples**
 
-Interactive function:
+The two following function are implemented in the **clj-chess-engine.core** namespace of this library. Here is what their imlementation look like.
+
+#### Interactive function:
 ```clojure
 (defn interactive-f [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
   (do
@@ -61,7 +78,9 @@ Interactive function:
      move)))
 ```
 
-Ramdom function
+Typically this function is used to turn the Chess state machine into an interactive game.
+
+#### Ramdom function
 ```clojure
 (defn random-f [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
   (let [v (into [] valid-moves)
@@ -75,7 +94,9 @@ Ramdom function
       {:move (get v move) :state iteration})) )
 ```
 
-### The function return value
+This implementation of Chess strategy is very basic. Each move is selected randomly from the list of valid move Chess Engine (the function game-play) is passing to the strategy functions.
+
+### The Strategy function return value
 
 Any game function need to return the datastructure (it's a map which contains at list a move):
 
@@ -108,7 +129,7 @@ The move's first element is the position of the piece to move; the second elemen
 You might have noticed that the coordinates follow a naming convention derived from the [algebraic notation](http://en.wikipedia.org/wiki/Algebraic_notation_(chess)) which is a standard used amongst chess players.
 
 
-### The function input parameters
+### The Strategy function input parameters
 
 The input is a map which contains the following information:
 ```clojure
@@ -155,8 +176,10 @@ The input is a map which contains the following information:
 [["a2" "a3"] ["f7" "f5"] ["c2" "c4"] ... ]
 ```
 
-**state** - this field is for the function implementor to keep any state of their choice between moves
-
+**state** - this field is for the function implementor to keep any state of their choice between moves. This is the same state that has been return on last move by the Strategy function. For example:
+```clojure
+    {:move ..., :state {:arbitrary "this is the state that I will get back to me on next move"}}
+```
 
 ## License
 

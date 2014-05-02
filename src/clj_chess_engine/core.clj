@@ -21,15 +21,22 @@
      (println "" '~@body "=" (str s#))
      res#))
 
-(defn unfold
+(defn unfold-old
   ([p f g seed tail-g]
    (lazy-seq
      (if (p seed)
        (tail-g seed)
        (cons (f seed)
-             (unfold p f g (g seed) tail-g)))))
+             (unfold-old p f g (g seed) tail-g)))))
   ([p f g seed]
-     (unfold p f g seed (fn [_] ()))))
+     (unfold-old p f g seed (fn [_] ()))))
+
+(defn unfold [g seed]
+  (->> (g seed)
+       (iterate (comp g second))
+       (take-while identity)
+       (map first)))
+
 
 
 ;;(macroexpand '(display-assert (+ x 1) x))
@@ -838,11 +845,12 @@
 
 ;;(display-board (apply-move-safe (initial-board) true false ["a2" "b3"]))
 (defn play-game-step [{:keys [board f1 f2 id1 id2 white-turn? move-history state-f1 state-f2 iteration channel game-id] :as game-context}]
-  (if (check-mate? board white-turn? move-history)
-      (do
+  (cond (or (nil? f1) (nil? f2)) nil
+   (check-mate? board white-turn? move-history)
+   (do
         (println "check-mate!")
         (vector true {:score (opposite-color-wins white-turn?) :history move-history :board board :result :check-mate}))
-      (let [new-iteration (if (nil? iteration) 1 (inc iteration))
+   :else (let [new-iteration (if (nil? iteration) 1 (inc iteration))
             in-check? (check? board (not white-turn?) move-history)
             valid-moves (into [] (move-xymap2move-vec (all-possible-moves-with-in-check board white-turn? move-history)))
             f-return (execute (get-playing-f game-context) {:board board
@@ -900,8 +908,12 @@
 
 (def game-step
   (domonad state-m
-           [a play-game-step]
-           a))
+           [a play-game-step
+            s (fetch-state)
+            :when (not (nil? s))]
+           [a s]
+
+           ))
 
 ;; (defn game-loop [init-state monadic-step]
 ;;   (loop [state init-state]
@@ -924,11 +936,9 @@
 
 (defn game-seq [monadic-step init-state]
   (unfold
-   (fn [[v _]] v)
-   identity
-   (comp monadic-step second)
-   [false init-state]
-   list))
+   monadic-step
+   init-state
+   ))
 
 
 ;; (take 100 (unfold
@@ -952,7 +962,16 @@
          ((comp play-game-step second) [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}])
          ))
 
- (second (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2})))
+ (take 10 (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
+ (take 10 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
+
+ (count (game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
+ (count (game-step {:board (initial-board) :white-turn? true :move-history [] }))
+ (count (play-game-step {:board (initial-board) :white-turn? true :move-history [] }))
+
+ (first (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 random-f-no-print :f2 random-f-no-print}))
+
+ )
 
 
 ;;(def m-game-seq (memoize game-seq))
@@ -963,7 +982,7 @@
     (profile (m-game-seq step state))))
 
 
-;;(second (play-scenario-seq  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
+;;(take 10 (play-scenario-seq game-step  [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]]))
 
 ;;for testing only
 (defn play-game-rec [game-init]
@@ -1029,7 +1048,16 @@
   (seq-result
    (play-scenario-seq game-step scenario)))
 
-
+(comment
+  (take 10 (play-scenario  [["e2" "e4"] ["e7" "e5"]
+                    ["d1" "h5"] ["d7" "d6"]
+                    ["f1" "c4"] ["b8" "c6"]
+                    ["h5" "f7"] ["e8" "e7"]]))
+  (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"]
+                    ["d1" "h5"] ["d7" "d6"]
+                    ["f1" "c4"] ["b8" "c6"]
+                    ["h5" "f7"] ["e8" "e7"]])
+  )
 ;; (defn board-seq [white-moves black-moves]
 ;;   (let [f1 (create-fn white-moves)
 ;;         f2 (create-fn black-moves)]
@@ -1089,19 +1117,19 @@
      move)))
 
 ;;; test functions
-(comment
- (defn f1 [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
-   (let [move-seq (if (nil? s)
-                    (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-                    s)]
-     [(first move-seq) (next move-seq)]))
 
- (defn f2 [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
-   (let [b board
-         move-seq (if (nil? option-state)
-                    (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
-                    option-state)]
-     [(first move-seq) (next move-seq)])))
+(defn f1 [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
+  (let [move-seq (if (nil? s)
+                   (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                   s)]
+    {:move (first move-seq) :state (next move-seq)}))
+
+(defn f2 [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
+  (let [b board
+        move-seq (if (nil? option-state)
+                   (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
+                   option-state)]
+    {:move (first move-seq) :state (next move-seq)}))
 
 (defn random-f [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
   (let [v (into [] valid-moves)
@@ -1112,6 +1140,12 @@
     (println "iteration:" iteration)
     (let [move (rand-int (count valid-moves))]
       (println "choosen move:" (get v move))
+      {:move (get v move) :state iteration})) )
+(defn random-f-no-print [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
+  (let [v (into [] valid-moves)
+        iteration (if (nil? s) (+ 1 (if am-i-white? 0 1)) (+ 2 s))]
+    (display-board board)
+    (let [move (rand-int (count valid-moves))]
       {:move (get v move) :state iteration})) )
 (def random-f-form-print '(fn random-f [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
    (let [v (into [] valid-moves)

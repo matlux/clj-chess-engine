@@ -643,6 +643,24 @@
               \R \N \B \Q \K \B \N \R]
             :result :invalid-move}))))
 
+(deftest function-f1-vs-f2-check-mate
+  (testing ""
+    (is (= (play-game {:board (initial-board) :f1 f1 :f2 f2})
+           {:score [1 0]
+          :history [["e2" "e4"] ["e7" "e5"]
+                    ["d1" "h5"] ["d7" "d6"]
+                    ["f1" "c4"] ["b8" "c6"]
+                    ["h5" "f7"] ]
+          :board [\r \- \b \q \k \b \n \r
+            \p \p \p \- \- \Q \p \p
+            \- \- \n \p \- \- \- \-
+            \- \- \- \- \p \- \- \-
+            \- \- \B \- \P \- \- \-
+            \- \- \- \- \- \- \- \-
+            \P \P \P \P \- \P \P \P
+            \R \N \B \- \K \- \N \R]
+           :result :check-mate}))))
+
 (def weird-obj (java.lang.Thread.))
 
 (deftest function-garbage-move6
@@ -836,6 +854,39 @@
             :result :invalid-move}))))
 
 
+(def f1-form-test
+  '(fn [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
+     (let [move-seq (if (nil? s)
+                      (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                      s)]
+       {:move (first move-seq) :state (into [] (next move-seq))}))
+)
+
+(def f2-form-test
+  '(fn [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
+     (let [b board
+           move-seq (if (nil? option-state)
+                      (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
+                      option-state)]
+       {:move (first move-seq) :state (into [] (next move-seq))}))
+)
+
+
+(deftest sand-boxed-f1-vs-f2
+  (testing ""
+    (is (= (play-game {:board (initial-board) :f1 (sb f1-form-test) :f2 (sb f2-form-test)})
+           {:score [1 0], :history [["e2" "e4"] ["e7" "e5"]
+                                    ["d1" "h5"] ["d7" "d6"]
+                                    ["f1" "c4"] ["b8" "c6"]
+                                    ["h5" "f7"]],
+            :board [\r \- \b \q \k \b \n \r
+                    \p \p \p \- \- \Q \p \p
+                    \- \- \n \p \- \- \- \-
+                    \- \- \- \- \p \- \- \-
+                    \- \- \B \- \P \- \- \-
+                    \- \- \- \- \- \- \- \-
+                    \P \P \P \P \- \P \P \P
+                    \R \N \B \- \K \- \N \R], :result :check-mate}))))
 
 (deftest security-infinite-loop
   (testing ""

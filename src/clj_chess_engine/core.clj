@@ -952,26 +952,38 @@
    ))
 
 
-;; (take 100 (unfold
-;;       (fn [x] false)
-;;       identity
-;;       inc
-;;       0))
 (comment
+
+(def f1-form-old
+  '(fn [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
+     (do
+       (let [move-seq (if (nil? s)
+                       (vector ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"] )
+                       s)]
+        {:move (first move-seq) :state (into [] (next move-seq))})))
+)
+(def f1-form
+  '(fn [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
+     (do
+       ;;(println "s=" s)
+       (let [i (if (nil? s)
+                       0
+                       s)]
+         {:move (get (vector ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"] ) i) :state (inc i)})))
+)
+
+(def f2-form
+  '(fn [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
+     (let [b board
+           move-seq (if (nil? option-state)
+                      (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
+                      option-state)]
+       {:move (first move-seq) :state (into [] (next move-seq))}))
+)
+
+
  (second (game-seq-old play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
- (second (unfold
-          (fn [[v _]] v)
-          identity
-          (comp play-game-step second)
-          [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}]
-          list))
  ((comp play-game-step second) [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}])
- (first (unfold
-         (fn [[v _]] v)
-         identity
-         (comp play-game-step second)
-         ((comp play-game-step second) [false {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}])
-         ))
 
  (take 10 (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
  (take 10 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
@@ -983,6 +995,10 @@
  (count (play-game-step {:board (initial-board) :white-turn? true :move-history [] }))
 
  (first (game-seq play-game-step {:board (initial-board) :white-turn? true :move-history [] :f1 random-f-no-print :f2 random-f-no-print}))
+
+ (take 3 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 (sb f1-form) :f2 f2}))
+
+
 
  )
 
@@ -1038,7 +1054,7 @@
 
 (defn play-scenario-seq [step scenario] (let [[f1 f2] (create-fns-from-scenario scenario)]
                                  (let [result (play-game-seq step {:f1 f1 :f2 f2})]
-                                   result)))
+                                   (take (count scenario) result))))
 
 ;; (defn play-scenario-seq [scenario]
 ;;   (play-scenario-with-step-seq game-step scenario))
@@ -1066,10 +1082,10 @@
                     ["d1" "h5"] ["d7" "d6"]
                     ["f1" "c4"] ["b8" "c6"]
                     ["h5" "f7"] ["e8" "e7"]]))
-  (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"]
-                    ["d1" "h5"] ["d7" "d6"]
-                    ["f1" "c4"] ["b8" "c6"]
-                    ["h5" "f7"] ["e8" "e7"]])
+  (count (play-scenario-seq game-step [["e2" "e4"] ["e7" "e5"]
+                                 ["d1" "h5"] ["d7" "d6"]
+                                 ["f1" "c4"] ["b8" "c6"]
+                                 ["h5" "f7"] ["e8" "e7"]]))
   )
 ;; (defn board-seq [white-moves black-moves]
 ;;   (let [f1 (create-fn white-moves)
@@ -1136,18 +1152,22 @@
 
 ;;; test functions
 
-(defn f1 [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
-  (let [move-seq (if (nil? s)
-                   (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
-                   s)]
-    {:move (first move-seq) :state (next move-seq)}))
+(def f1
+  (fn [{board :board am-i-white? :white-turn? ic :in-check? h :history s :state}]
+     (let [move-seq (if (nil? s)
+                      (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                      s)]
+       {:move (first move-seq) :state (next move-seq)}))
+)
 
-(defn f2 [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
-  (let [b board
-        move-seq (if (nil? option-state)
-                   (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
-                   option-state)]
-    {:move (first move-seq) :state (next move-seq)}))
+(def f2
+  (fn [{board :board am-i-white? :white-turn? ic :in-check? h :history option-state :state}]
+     (let [b board
+           move-seq (if (nil? option-state)
+                      (list ["e7" "e5"] ["d7" "d6"] ["b8" "c6"] ["e8" "e7"])
+                      option-state)]
+       {:move (first move-seq) :state (next move-seq)}))
+)
 
 (defn random-f [{board :board am-i-white? :white-turn? valid-moves :valid-moves ic :in-check? h :history s :state}]
   (let [v (into [] valid-moves)
@@ -1218,7 +1238,34 @@
   ([form] (fn [arg] ((sb) (list form arg))))
   ([form timeout] (fn [arg] ((sandbox (conj secure-tester (blacklist-objects [java.lang.Thread])) :timeout timeout) (list form arg)))))
 
+(comment
 
+(def arg {:move-history [["e2" "e4"] ["e7" "e5"]], :iteration 2, :state-f1 '(["d1" "h5"] ["f1" "c4"] ["h5" "f7"]), :f1 (sb f1-form), :f2 f2, :board [\r \n \b \q \k \b \n \r \p \p \p \p \- \p \p \p \- \- \- \- \- \- \- \- \- \- \- \- \p \- \- \- \- \- \- \- \P \- \- \- \- \- \- \- \- \- \- \- \P \P \P \P \- \P \P \P \R \N \B \Q \K \B \N \R], :white-turn? true, :game-id nil, :channel nil, :msg-type :in-game-update, :id1 nil, :id2 nil, :state-f2 '(["d7" "d6"] ["b8" "c6"] ["e8" "e7"])})
+(def arg {:move-history [["e2" "e4"] ["e7" "e5"]], :iteration 2, :state-f1 '(["d1" "h5"] ["f1" "c4"] ["h5" "f7"]), :f1 f1, :f2 f2, :board [\r \n \b \q \k \b \n \r \p \p \p \p \- \p \p \p \- \- \- \- \- \- \- \- \- \- \- \- \p \- \- \- \- \- \- \- \P \- \- \- \- \- \- \- \- \- \- \- \P \P \P \P \- \P \P \P \R \N \B \Q \K \B \N \R], :white-turn? true, :game-id nil, :channel nil, :msg-type :in-game-update, :id1 nil, :id2 nil, :state-f2 '(["d7" "d6"] ["b8" "c6"] ["e8" "e7"])})
+
+
+((fn [{board :board, am-i-white? :white-turn?, ic :in-check?, h :history, s :state}]
+   (let [move-seq (if (nil? s)
+                    (list ["e2" "e4"] ["d1" "h5"] ["f1" "c4"] ["h5" "f7"])
+                    s)]
+     {:move (first move-seq), :state (next move-seq)})) arg)
+
+(game-step arg)
+
+
+(def f-arg {:board [\r \n \b \q \k \b \n \r \p \p \p \p \- \p \p \p \- \- \- \- \- \- \- \- \- \- \- \- \p \- \- \- \- \- \- \- \P \- \- \- \- \- \- \- \- \- \- \- \P \P \P \P \- \P \P \P \R \N \B \Q \K \B \N \R], :white-turn? true, :valid-moves [["h2" "h3"] ["h2" "h4"] ["g2" "g3"] ["g2" "g4"] ["f2" "f3"] ["f2" "f4"] ["g1" "f3"] ["g1" "e2"] ["g1" "h3"] ["f1" "a6"] ["f1" "b5"] ["f1" "c4"] ["f1" "d3"] ["f1" "e2"] ["d2" "d3"] ["d2" "d4"] ["e1" "e2"] ["c2" "c3"] ["c2" "c4"] ["d1" "e2"] ["d1" "f3"] ["d1" "g4"] ["d1" "h5"] ["b2" "b3"] ["b2" "b4"] ["a2" "a3"] ["a2" "a4"] ["b1" "c3"] ["b1" "a3"]], :in-check? false, :history [["e2" "e4"] ["e7" "e5"]], :state [["d1" "h5"] ["f1" "c4"] ["h5" "f7"],] :id nil})
+
+((sb random-f-form) f-arg)
+((sb f1-form-old) f-arg)
+(f1 f-arg)
+
+)
+
+
+
+
+;; (take 2 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 (sb f1-form) :f2 f2}))
+;; (take 3 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 (sb f1-form-old) :f2 f2}))
 
 (defn sand-boxed-mini-tournement []
   (let [result (play-game {:board (initial-board) :f1 (fn [in] ((sb) (list random-f-form in))) :f2 (sb random-f-form-print) :id1 "daredevil" :id2 "wonderboy"})]

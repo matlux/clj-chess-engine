@@ -194,7 +194,7 @@
 ;(coord2pos [4 6])
 
 
-(move2move-xy ["e5" "e6"])
+;;(move2move-xy ["e5" "e6"])
 
 (defn- index [file rank]
   {:pre [(and (char? file) (char? rank))]}
@@ -274,9 +274,9 @@
          y (rank2coord rank)]
      [x y])))
 
-(pos-within-board? "e8")
-(pos-within-board? "e9")
-(pos-within-board? "q8")
+;;(pos-within-board? "e8")
+;;(pos-within-board? "e9")
+;;(pos-within-board? "q8")
 
 (defn collid-self? [board white-turn? coord]
   (if white-turn?
@@ -319,28 +319,32 @@
     (pos-between-xy p1 p2)))
 
 
-(pos-between [0 0] [7 7])
-(pos-between [0 0] [0 7])
-(pos-between [2 2] [7 7])
-(pos-between [0 0] [7 0])
-(pos-between [7 7] [0 0])
-(pos-between [0 7] [0 0])
-(pos-between [7 0] [0 0])
-(pos-between [7 7] [1 1])
+(comment
+  (pos-between [0 0] [7 7])
+  (pos-between [0 0] [0 7])
+  (pos-between [2 2] [7 7])
+  (pos-between [0 0] [7 0])
+  (pos-between [7 7] [0 0])
+  (pos-between [0 7] [0 0])
+  (pos-between [7 0] [0 0])
+  (pos-between [7 7] [1 1])
+)
 
 
 
 (defn- nothing-between [board p1 p2]
   (not-any? is-piece? (map #(lookup-xy board %) (pos-between p1 p2))))
 
-(nothing-between (initial-board) [0 0] [7 7])
-(nothing-between (initial-board) [1 1] [6 6])
-(nothing-between (initial-board) [2 0] [6 0])
-(nothing-between (initial-board) [0 1] [0 6])
-(nothing-between (initial-board) [0 0] [7 7])
-(nothing-between (initial-board) [0 0] [7 7])
-(nothing-between (initial-board) [0 0] [7 7])
-(nothing-between (test-board2) [0 7] [1 7])
+(comment
+  (nothing-between (initial-board) [0 0] [7 7])
+  (nothing-between (initial-board) [1 1] [6 6])
+  (nothing-between (initial-board) [2 0] [6 0])
+  (nothing-between (initial-board) [0 1] [0 6])
+  (nothing-between (initial-board) [0 0] [7 7])
+  (nothing-between (initial-board) [0 0] [7 7])
+  (nothing-between (initial-board) [0 0] [7 7])
+  (nothing-between (test-board2) [0 7] [1 7])
+)
 
 (defn collid? [board pos] (not (= (lookup-xy board pos) \-)))
 
@@ -897,23 +901,29 @@
         en-passant-move-xymap (move-en-passant board white-turn? false move-history move-xy)
         real-move (if en-passant-move-xymap en-passant-move-xymap move-xy)]
     (vector false (merge
-                    {:board (apply-move board real-move)
-                     :f1 f1 :f2 f2 :id1 id1 :id2 id2
-                     :msg-type :in-game-update
-                     :white-turn? (not white-turn?) :move-history new-history :iteration new-iteration}
-                    (if white-turn?
-                      {:state-f1 new-state :state-f2 state-f2}
-                      {:state-f1 state-f1 :state-f2 new-state})))
+                   {:board (apply-move board real-move)
+                    :f1 f1 :f2 f2 :id1 id1 :id2 id2
+                    :msg-type :in-game-update
+                    :white-turn? (not white-turn?) :move-history new-history :iteration new-iteration}
+                   (if white-turn?
+                     {:state-f1 new-state :state-f2 state-f2}
+                     {:state-f1 state-f1 :state-f2 new-state})))
     ))
 
-(def game-step
+(defn game-step-monad-wrap [game-step]
   (domonad state-m
-           [a play-game-step
+           [res (fetch-val :result)
+            a game-step
             s (fetch-state)
-            :when (not (nil? s))]
+            :when (nil? res)]
            [a s]
 
            ))
+
+(def game-step (game-step-monad-wrap play-game-step))
+
+(def replay-game-step-monad (game-step-monad-wrap replay-game-step))
+
 
 ;; (defn game-loop [init-state monadic-step]
 ;;   (loop [state init-state]
@@ -934,6 +944,7 @@
         (cons [v s] (game-seq-r (monadic-step s))))))
    [false init-state]))
 
+;; this function is central to the chess engine
 (defn game-seq [monadic-step init-state]
   (unfold
    monadic-step
@@ -966,6 +977,8 @@
  (take 10 (game-seq game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
 
  (count (game-step {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2}))
+ (replay-game-step-monad {:board (initial-board) :white-turn? true :move-history [] :f1 f1 :f2 f2})
+ (replay-game-step-monad {:board (initial-board) :white-turn? true :move-history [] :result []})
  (count (game-step {:board (initial-board) :white-turn? true :move-history [] }))
  (count (play-game-step {:board (initial-board) :white-turn? true :move-history [] }))
 
@@ -1073,14 +1086,14 @@
 	  new-s   (assoc s key (conj old-vals val))]
       [old-vals new-s])))
 
-;;(def m-game-step (memoize replay-game-step))
-(def m-game-step replay-game-step)
+;;(def m-replay-game-step (memoize replay-game-step))
+(def m-replay-game-step replay-game-step)
 
 (defn board-seq [moves]
   (->>
    (play-scenario-seq
-    m-game-step
-    moves) (map second) (map :board)))
+    replay-game-step-monad
+    moves) (map second) (map :board) (take (count moves)) (cons (initial-board))))
 
 (comment
   (->>
@@ -1093,7 +1106,12 @@
              a)
     [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) (map second) (map :board))
   (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] )
-  (profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 0))
+  (take 8 (play-scenario-seq
+    replay-game-step-monad
+    [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ))
+
+
+  (profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8))
   (macroexpand '(profile (nth (board-seq [["e2" "e4"] ["e7" "e5"] ["d1" "h5"] ["d7" "d6"] ["f1" "c4"] ["b8" "c6"] ["h5" "f7"] ["e8" "e7"]] ) 8)))
 
 

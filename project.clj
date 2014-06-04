@@ -1,4 +1,4 @@
-(defproject clj-chess-engine "0.1.0.6"
+(defproject clj-chess-engine "0.1.0.7-SNAPSHOT"
   :description "Chess Engine written in Clojure"
   :url "http://lambda-zone.com"
   :license {:name "Eclipse Public License"

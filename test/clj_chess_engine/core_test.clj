@@ -890,7 +890,7 @@
 
 (deftest security-infinite-loop
   (testing ""
-    (is (= (dissoc (play-game {:board (initial-board) :f1 (sb '(fn [_] (loop [] (recur)))) :f2 invalid-move-f}) :stacktrace)
+    (is (= (dissoc (play-game {:board (initial-board) :f1 (sb '(fn [_] (loop [] (recur))) 5000) :f2 invalid-move-f}) :stacktrace)
            {:score [0 1]
             :history [:exception]
             :board [\r \n \b \q \k \b \n \r

@@ -1234,7 +1234,7 @@
    (recur)))
 
 (defn sb
-  ([] (sandbox (conj secure-tester (blacklist-objects [java.lang.Thread])) :timeout 5000))
+  ([] (sandbox (conj secure-tester (blacklist-objects [java.lang.Thread])) :timeout 40000))
   ([form] (fn [arg] ((sb) (list form arg))))
   ([form timeout] (fn [arg] ((sandbox (conj secure-tester (blacklist-objects [java.lang.Thread])) :timeout timeout) (list form arg)))))
 

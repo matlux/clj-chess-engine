@@ -9,4 +9,5 @@
                  [org.clojure/tools.trace "0.7.5"]
                  [org.clojure/algo.monads "0.1.4"]
                  [org.clojure/core.async "0.1.242.0-44b1e3-alpha"]]
-  :main clj-chess-engine.core)
+  :main clj-chess-engine.core
+  :jvm-opts ["-Djava.security.policy=java-security.policy"])

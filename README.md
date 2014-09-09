@@ -2,6 +2,9 @@
 
 A Clojure application designed to play chess and get functions to compete against one another.
 
+[![Build Status](https://travis-ci.org/matlux/clj-chess-engine.svg?branch=master)](https://travis-ci.org/matlux/clj-chess-engine)
+
+
 ### Quick Demo
 
 clone the repo
